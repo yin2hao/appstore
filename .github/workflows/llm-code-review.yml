@@ -2,27 +2,54 @@ name: LLM Code Review
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
+  pull_request_target:
+    types: [ opened ]
+  workflow_run:
+    workflows: [ "Update app version in Renovate Branches" ]
+    types: [ completed ]
 
 jobs:
   llm-code-review:
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.action == 'opened' &&
+        !(github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'renovate/'))
+      )
     runs-on: ubuntu-latest
     steps:
-      - uses: fit2cloud/LLM-CodeReview-Action@main
+      - uses: actions/checkout@v4
+        with:
+          # Run trusted workflow code from the base/default branch; the script reads the PR diff through GitHub API.
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.event.repository.default_branch }}
+
+      - name: LLM code review with model fallback
+        run: node .github/scripts/llm-code-review-fallback.mjs
         env:
-          GITHUB_TOKEN: ${{ secrets.FIT2CLOUDRD_LLM_CODE_REVIEW_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.ALIYUN_LLM_API_KEY }}
-          LANGUAGE: English
+          GITHUB_TOKEN: ${{ secrets.LLM_CODE_REVIEW_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LANGUAGE: Chinese
           OPENAI_API_ENDPOINT: ${{ secrets.LLM_BASE_URL }}
-          MODEL: qwen2.5-coder-3b-instruct
-          PROMPT: "Please check the following code differences for any irregularities, potential issues, or optimization suggestions, and provide your answers in English."
+          MODEL: openai/gpt-oss-120b
+          # Add more fallback models here, or set LLM_MODELS to override the full order.
+          FALLBACK_MODELS: z-ai/glm5.1,qwen/qwen3.5-397b-a17b
+          REVIEW_POLICY: ${{ github.event_name == 'pull_request_target' && 'strict' || 'relaxed' }}
+          PROMPT: ${{ github.event_name == 'pull_request_target' && '请把以下 PR 作为一个整体进行严格审查。如果新增了应用，那么检查此应用容器编排的格式是否错误正确，并给出审查建议。引入超高危漏洞或明确的逻辑性错误时必须阻止自动合并。修改应用版本时，应注意不要直接修改旧版本的compose文件，而是创建新版本的文件夹单独修改，旧版本的compose文件留存' || '请把以下 PR 作为一个整体进行审查。只有当 PR 引入超高危漏洞或明确的逻辑性错误时才阻止自动合并；普通风险、优化建议、缺少测试或不确定性请作为备注说明，但仍允许合并。' }}
           top_p: 1
-          temperature: 1
+          temperature: 0
           # max_tokens: 10000
-          MAX_PATCH_LENGTH: 10000
-          IGNORE_PATTERNS: "/node_modules,*.md,/dist,/.github"
-          FILE_PATTERNS: "*.java,*.go,*.py,*.vue,*.ts,*.js,*.css,*.scss,*.html,*.yml,*.yaml"
+          MAX_DIFF_LENGTH: 10000
+          IGNORE_PATTERNS: ${{ github.event_name == 'pull_request_target' && '/node_modules,*.md,/dist' || '/node_modules,*.md,/dist,/.github' }}
+          FILE_PATTERNS: ${{ github.event_name == 'pull_request_target' && '' || '*.java,*.go,*.py,*.vue,*.ts,*.js,*.css,*.scss,*.html,*.yml,*.yaml' }}
+
+      - name: Upload PR metadata
+        uses: actions/upload-artifact@v6
+        with:
+          name: llm-review-pr-metadata
+          path: .github/llm-review-pr-metadata.json
+          if-no-files-found: ignore

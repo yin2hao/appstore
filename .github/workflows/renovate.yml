@@ -2,12 +2,12 @@ name: Renovate
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 0 * * *"
+      timezone: "Asia/Shanghai"
   workflow_dispatch:
-    inputs:
-      manual-trigger:
-        description: 'Manually trigger Renovate'
-        default: ''
+
+env:
+  RENOVATE_REPOSITORIES: ${{ github.repository }}
 
 jobs:
   renovate:

@@ -3,11 +3,10 @@ name: Update app version in Renovate Branches
 on:
   push:
     branches: [ 'renovate/*' ]
-  workflow_dispatch:
-    inputs:
-      manual-trigger:
-        description: 'Manually trigger Renovate'
-        default: ''
+
+permissions:
+  contents: write
+
 jobs:
   update-app-version:
     runs-on: ubuntu-latest
@@ -31,12 +30,17 @@ jobs:
         run: |
           IFS=' ' read -ra files <<< "${{ steps.updated-files.outputs.files }}"
 
-          for file in "${files[@]}"; do
+          mapfile -t docker_compose_files < <(
+            printf '%s\n' "${files[@]}" |
+              awk -F/ '$1 == "apps" && $NF == "docker-compose.yml" { print }' |
+              sort -t/ -k2,2 -k3,3Vr
+          )
+
+          for file in "${docker_compose_files[@]}"; do
             if [[ $file == *"docker-compose.yml"* ]]; then
               app_name=$(echo $file | cut -d'/' -f 2)
               old_version=$(echo $file | cut -d'/' -f 3)
-              chmod +x .github/workflows/renovate-app-version.sh
-              .github/workflows/renovate-app-version.sh $app_name $old_version
+              bash .github/scripts/renovate-app-version.sh "$app_name" "$old_version"
             fi
           done
 
@@ -44,10 +48,25 @@ jobs:
         run: |
           IFS=' ' read -ra files <<< "${{ steps.updated-files.outputs.files }}"
 
-          for file in "${files[@]}"; do
-            if [[ $file == *"docker-compose.yml"* ]]; then
-              app_name=$(echo $file | cut -d'/' -f 2)
-              git add "apps/$app_name/*" && git commit -m "Update app version [skip ci]" --no-verify && git push || true
-            fi
+          mapfile -t app_names < <(
+            printf '%s\n' "${files[@]}" |
+              awk -F/ '$1 == "apps" && $NF == "docker-compose.yml" { print $2 }' |
+              sort -u
+          )
+
+          if [[ ${#app_names[@]} -eq 0 ]]; then
+            echo "No app docker-compose.yml changes to commit."
+            exit 0
+          fi
+
+          for app_name in "${app_names[@]}"; do
+            git add "apps/$app_name"
           done
 
+          if git diff --cached --quiet; then
+            echo "No app version changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Update app version [skip ci]" --no-verify
+          git push
