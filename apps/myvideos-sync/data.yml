@@ -1,0 +1,33 @@
+name: "MyVideos Sync"
+tags:
+  - Tool
+  - Storage
+title: "MyVideos Sync"
+description: "My Videos 的自托管 WebDAV 容灾同步服务。通过 HTTP API 触发同步任务，将主 WebDAV 的文件变更镜像到容灾 WebDAV。"
+additionalProperties:
+  key: myvideos-sync
+  name: "MyVideos Sync"
+  tags:
+    - Tool
+    - Storage
+  shortDescZh: "My Videos 的自托管 WebDAV 容灾同步服务。通过 HTTP API 触发同步任务，将主 WebDAV 的文件变更镜像到容灾 WebDAV。"
+  shortDescEn: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+  description:
+    en: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    es-es: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    ja: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    ms: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    pt-br: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    ru: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    ko: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+    zh-Hant: "My Videos 的自托管 WebDAV 容灾同步服务。通过 HTTP API 触发同步任务，将主 WebDAV 的文件变更镜像到容灾 WebDAV。"
+    zh: "My Videos 的自托管 WebDAV 容灾同步服务。通过 HTTP API 触发同步任务，将主 WebDAV 的文件变更镜像到容灾 WebDAV。"
+    tr: "Self-hosted WebDAV disaster-recovery sync service for My Videos. Trigger sync jobs over HTTP API to mirror file changes from primary WebDAV to disaster WebDAV."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+  website: https://github.com/yin2hao/Myvideos-sync
+  github: https://github.com/yin2hao/Myvideos-sync
+  document: "https://github.com/yin2hao/Myvideos-sync#readme"
