@@ -68,14 +68,7 @@ def get_workflow_run_pr_number() -> str:
     workflow_run = event.get('workflow_run', {})
     pull_requests = workflow_run.get('pull_requests') or []
 
-    metadata = get_workflow_run_pr_metadata(workflow_run)
-
-    if metadata and not is_auto_merge_metadata(metadata):
-        pr_number = metadata.get('number') or ''
-        print(f"LLM workflow 审查的是非自动合并 PR #{pr_number}，只保留审查结果")
-        return ''
-
-    metadata_pr_number = str(metadata.get('number') or '') if metadata else ''
+    metadata_pr_number = get_workflow_run_pr_number_by_artifact(workflow_run)
 
     if metadata_pr_number:
         print(f"通过 {LLM_PR_METADATA_ARTIFACT} artifact 定位到 PR #{metadata_pr_number}")
@@ -92,13 +85,13 @@ def get_workflow_run_pr_number() -> str:
 
     return get_workflow_run_pr_number_by_head(workflow_run)
 
-def get_workflow_run_pr_metadata(workflow_run: Dict[str, Any]) -> Dict[str, Any]:
-    """从 LLM Code Review 上传的 artifact 读取它实际审查的 PR metadata"""
+def get_workflow_run_pr_number_by_artifact(workflow_run: Dict[str, Any]) -> str:
+    """从 LLM Code Review 上传的 artifact 读取它实际审查的 PR"""
     run_id = workflow_run.get('id')
 
     if not run_id:
         print("workflow_run 事件没有 run id，无法下载 PR metadata artifact")
-        return {}
+        return ''
 
     artifacts = github_paginated(f'/actions/runs/{run_id}/artifacts')
 
@@ -114,7 +107,7 @@ def get_workflow_run_pr_metadata(workflow_run: Dict[str, Any]) -> Dict[str, Any]
 
     if not metadata_artifacts:
         print(f"LLM workflow run {run_id} 未找到 {LLM_PR_METADATA_ARTIFACT} artifact")
-        return {}
+        return ''
 
     artifact = sorted(
         metadata_artifacts,
@@ -125,7 +118,7 @@ def get_workflow_run_pr_metadata(workflow_run: Dict[str, Any]) -> Dict[str, Any]
 
     if not download_url:
         print(f"{LLM_PR_METADATA_ARTIFACT} artifact 没有下载地址")
-        return {}
+        return ''
 
     response = github_request_raw('GET', download_url)
 
@@ -139,24 +132,15 @@ def get_workflow_run_pr_metadata(workflow_run: Dict[str, Any]) -> Dict[str, Any]
                 metadata = json.load(metadata_file)
     except Exception as exc:
         print(f"读取 {LLM_PR_METADATA_ARTIFACT} artifact 失败: {exc}")
-        return {}
+        return ''
 
     pr_number = str(metadata.get('number') or '')
 
     if not pr_number:
         print(f"{LLM_PR_METADATA_ARTIFACT} artifact 未包含 PR 编号")
-        return {}
+        return ''
 
-    return metadata
-
-def is_auto_merge_metadata(metadata: Dict[str, Any]) -> bool:
-    """只有宽松审核链路中的 renovate/* PR 才允许进入自动合并"""
-    return (
-        metadata.get('review_policy') == 'relaxed' and
-        bool(metadata.get('auto_merge_candidate')) and
-        metadata.get('head_repo') == REPOSITORY and
-        str(metadata.get('head_ref') or '').startswith('renovate/')
-    )
+    return pr_number
 
 def get_workflow_run_pr_number_by_head(workflow_run: Dict[str, Any]) -> str:
     """workflow_run 有时没有 pull_requests，按 head branch/head sha 反查 PR"""

@@ -240,11 +240,6 @@ function writePullRequestMetadata(pullRequest) {
     head_ref: pullRequest.head?.ref || '',
     head_sha: pullRequest.head?.sha || '',
     head_repo: pullRequest.head?.repo?.full_name || '',
-    review_policy: reviewPolicy,
-    auto_merge_candidate:
-      reviewPolicy === 'relaxed' &&
-      pullRequest.head?.repo?.full_name === env.GITHUB_REPOSITORY &&
-      (pullRequest.head?.ref || '').startsWith('renovate/'),
   };
 
   fs.writeFileSync(outputPath, `${JSON.stringify(metadata, null, 2)}\n`);
