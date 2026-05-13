@@ -374,17 +374,60 @@ def wait_for_checks(pr_number: int, max_wait: int = 600) -> Optional[Dict[str, A
     return None
 
 def merge_pr(pr_number: int, head_sha: str) -> bool:
-    """合并PR"""
+    """压缩合并 PR"""
     url = f'https://api.github.com/repos/{REPOSITORY}/pulls/{pr_number}/merge'
-    data = {'merge_method': 'merge', 'sha': head_sha}
+    data = {'merge_method': 'squash', 'sha': head_sha}
+
     response = requests.put(url, headers=HEADERS, json=data)
 
     if response.status_code == 200:
-        print(f"成功合并PR #{pr_number}")
+        print(f"成功压缩合并PR #{pr_number}")
         return True
     else:
         print(f"合并PR #{pr_number} 失败: {response.json().get('message', '未知错误')}")
         return False
+
+def delete_head_branch(pr_number: int, head_ref: str, head_sha: str) -> bool:
+    """删除已合并 PR 的同仓库 head 分支"""
+    if not head_ref:
+        print(f"PR #{pr_number} 未找到 head 分支名，跳过删除分支")
+        return False
+
+    encoded_ref = urllib.parse.quote(f'heads/{head_ref}', safe='/')
+    get_ref_path = f'/git/ref/{encoded_ref}'
+    delete_ref_path = f'/git/refs/{encoded_ref}'
+
+    try:
+        current_ref = github_request('GET', get_ref_path)
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 404:
+            print(f"PR #{pr_number} 的 head 分支 {head_ref} 已不存在")
+            return True
+
+        print(f"读取 PR #{pr_number} head 分支 {head_ref} 失败: {exc}")
+        return False
+
+    current_sha = current_ref.get('object', {}).get('sha', '')
+
+    if current_sha != head_sha:
+        print(
+            f"PR #{pr_number} head 分支 {head_ref} 已变化，"
+            f"当前为 {current_sha}，合并时为 {head_sha}，跳过删除"
+        )
+        return False
+
+    try:
+        github_request('DELETE', delete_ref_path)
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 404:
+            print(f"PR #{pr_number} 的 head 分支 {head_ref} 已不存在")
+            return True
+
+        print(f"删除 PR #{pr_number} head 分支 {head_ref} 失败: {exc}")
+        return False
+
+    print(f"已删除 PR #{pr_number} head 分支 {head_ref}")
+    return True
 
 def add_comment(pr_number: int, comment: str):
     """在PR上添加评论"""
@@ -400,6 +443,7 @@ def process_pr(pr: Dict[str, Any]):
     pr_title = pr['title']
     pr_body = pr.get('body', '') or ''
     head_sha = pr.get('head', {}).get('sha', '')
+    head_ref = pr.get('head', {}).get('ref', '')
 
     print(f"处理PR #{pr_number} 来自 {pr_author}: {pr_title}")
 
@@ -457,7 +501,10 @@ def process_pr(pr: Dict[str, Any]):
         return
 
     if merge_pr(pr_number, latest_head_sha):
-        add_comment(pr_number, "✅ 自动合并: 小版本更新已自动合并")
+        if delete_head_branch(pr_number, head_ref, latest_head_sha):
+            add_comment(pr_number, "✅ 自动合并: 小版本更新已自动合并，head 分支已删除")
+        else:
+            add_comment(pr_number, "✅ 自动合并: 小版本更新已自动合并，但 head 分支删除失败，请手动处理")
     else:
         add_comment(pr_number, "❌ 自动合并失败: 请手动处理")
 
