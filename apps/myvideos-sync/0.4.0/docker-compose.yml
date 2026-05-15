@@ -1,0 +1,27 @@
+services:
+  myvideos-sync:
+    image: yin2hao/myvideos-sync:0.4.0
+    container_name: "${CONTAINER_NAME}"
+    restart: unless-stopped
+    networks:
+      - 1panel-network
+    ports:
+      - "${PANEL_APP_PORT_HTTP}:8080"
+    volumes:
+      - ./data:/home/appuser/.config/myvideos-sync
+    environment:
+      MYVIDEOS_SYNC_LISTEN_ADDR: ":8080"
+      MYVIDEOS_SYNC_API_TOKEN: "${MYVIDEOS_SYNC_API_TOKEN}"
+      MYVIDEOS_SYNC_CONFIG_PATH: "/home/appuser/.config/myvideos-sync/config.json"
+      MYVIDEOS_SYNC_ROOT_PATH: "${MYVIDEOS_SYNC_ROOT_PATH}"
+      MYVIDEOS_SYNC_PARALLEL_SCANS: "${MYVIDEOS_SYNC_PARALLEL_SCANS}"
+      MYVIDEOS_SYNC_PARALLEL_COPIES: "${MYVIDEOS_SYNC_PARALLEL_COPIES}"
+      MYVIDEOS_SYNC_REQUEST_TIMEOUT: "${MYVIDEOS_SYNC_REQUEST_TIMEOUT}"
+      MYVIDEOS_SYNC_TRANSFER_TIMEOUT: "${MYVIDEOS_SYNC_TRANSFER_TIMEOUT}"
+      MYVIDEOS_SYNC_CHUNK_SIZE: "${MYVIDEOS_SYNC_CHUNK_SIZE}"
+      MYVIDEOS_SYNC_SPEED_LIMIT_BYTES_PER_SECOND: "${MYVIDEOS_SYNC_SPEED_LIMIT_BYTES_PER_SECOND}"
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true

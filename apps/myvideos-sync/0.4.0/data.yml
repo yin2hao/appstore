@@ -1,0 +1,156 @@
+additionalProperties:
+  formFields:
+    - default: 8080
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: Port
+      labelZh: "端口"
+      label:
+        en: Port
+        es-es: Puerto
+        ja: "ポート"
+        ms: Port
+        pt-br: Porta
+        ru: "Порт"
+        ko: "포트"
+        zh-Hant: "埠"
+        zh: "端口"
+        tr: "Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
+    - default: change-this-token
+      envKey: MYVIDEOS_SYNC_API_TOKEN
+      labelEn: "API Token"
+      labelZh: "API 令牌"
+      required: true
+      type: password
+      label:
+        en: "API Token"
+        es-es: "API Token"
+        ja: "API Token"
+        ms: "API Token"
+        pt-br: "API Token"
+        ru: "API Token"
+        ko: "API Token"
+        zh-Hant: "API 令牌"
+        zh: "API 令牌"
+        tr: "API Token"
+    - default: myvideos
+      envKey: MYVIDEOS_SYNC_ROOT_PATH
+      labelEn: "Sync Root Path"
+      labelZh: "同步根路径"
+      required: false
+      type: text
+      label:
+        en: "Sync Root Path"
+        es-es: "Sync Root Path"
+        ja: "Sync Root Path"
+        ms: "Sync Root Path"
+        pt-br: "Sync Root Path"
+        ru: "Sync Root Path"
+        ko: "Sync Root Path"
+        zh-Hant: "同步根路径"
+        zh: "同步根路径"
+        tr: "Sync Root Path"
+    - default: 16
+      envKey: MYVIDEOS_SYNC_PARALLEL_SCANS
+      labelEn: "Parallel Scans"
+      labelZh: "并发扫描数"
+      required: false
+      type: number
+      label:
+        en: "Parallel Scans"
+        es-es: "Parallel Scans"
+        ja: "Parallel Scans"
+        ms: "Parallel Scans"
+        pt-br: "Parallel Scans"
+        ru: "Parallel Scans"
+        ko: "Parallel Scans"
+        zh-Hant: "并发扫描数"
+        zh: "并发扫描数"
+        tr: "Parallel Scans"
+    - default: 3
+      envKey: MYVIDEOS_SYNC_PARALLEL_COPIES
+      labelEn: "Parallel Copies"
+      labelZh: "并发复制数"
+      required: false
+      type: number
+      label:
+        en: "Parallel Copies"
+        es-es: "Parallel Copies"
+        ja: "Parallel Copies"
+        ms: "Parallel Copies"
+        pt-br: "Parallel Copies"
+        ru: "Parallel Copies"
+        ko: "Parallel Copies"
+        zh-Hant: "并发复制数"
+        zh: "并发复制数"
+        tr: "Parallel Copies"
+    - default: 60s
+      envKey: MYVIDEOS_SYNC_REQUEST_TIMEOUT
+      labelEn: "Request Timeout"
+      labelZh: "请求超时"
+      required: false
+      type: text
+      label:
+        en: "Request Timeout"
+        es-es: "Request Timeout"
+        ja: "Request Timeout"
+        ms: "Request Timeout"
+        pt-br: "Request Timeout"
+        ru: "Request Timeout"
+        ko: "Request Timeout"
+        zh-Hant: "请求超时"
+        zh: "请求超时"
+        tr: "Request Timeout"
+    - default: 6h
+      envKey: MYVIDEOS_SYNC_TRANSFER_TIMEOUT
+      labelEn: "Transfer Timeout"
+      labelZh: "传输超时"
+      required: false
+      type: text
+      label:
+        en: "Transfer Timeout"
+        es-es: "Transfer Timeout"
+        ja: "Transfer Timeout"
+        ms: "Transfer Timeout"
+        pt-br: "Transfer Timeout"
+        ru: "Transfer Timeout"
+        ko: "Transfer Timeout"
+        zh-Hant: "传输超时"
+        zh: "传输超时"
+        tr: "Transfer Timeout"
+    - default: 1048576
+      envKey: MYVIDEOS_SYNC_CHUNK_SIZE
+      labelEn: "Chunk Size"
+      labelZh: "分块大小"
+      required: false
+      type: number
+      label:
+        en: "Chunk Size"
+        es-es: "Chunk Size"
+        ja: "Chunk Size"
+        ms: "Chunk Size"
+        pt-br: "Chunk Size"
+        ru: "Chunk Size"
+        ko: "Chunk Size"
+        zh-Hant: "分块大小"
+        zh: "分块大小"
+        tr: "Chunk Size"
+    - default: 0
+      envKey: MYVIDEOS_SYNC_SPEED_LIMIT_BYTES_PER_SECOND
+      labelEn: "Initial Speed Limit"
+      labelZh: "初始限速"
+      required: false
+      type: number
+      label:
+        en: "Initial Speed Limit"
+        es-es: "Initial Speed Limit"
+        ja: "Initial Speed Limit"
+        ms: "Initial Speed Limit"
+        pt-br: "Initial Speed Limit"
+        ru: "Initial Speed Limit"
+        ko: "Initial Speed Limit"
+        zh-Hant: "初始限速"
+        zh: "初始限速"
+        tr: "Initial Speed Limit"
