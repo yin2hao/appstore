@@ -1,0 +1,34 @@
+name: SillyTavern
+tags:
+  - AI
+  - Tool
+title: SillyTavern
+description: "面向高级用户的 LLM 前端。"
+additionalProperties:
+  key: sillytavern
+  name: SillyTavern
+  tags:
+    - AI
+    - Tool
+  shortDescZh: "面向高级用户的 LLM 前端。"
+  shortDescEn: "LLM frontend for power users."
+  description:
+    en: "LLM frontend for power users."
+    es-es: "LLM frontend for power users."
+    ja: "LLM frontend for power users."
+    ms: "LLM frontend for power users."
+    pt-br: "LLM frontend for power users."
+    ru: "LLM frontend for power users."
+    ko: "LLM frontend for power users."
+    zh-Hant: "面向進階使用者的 LLM 前端。"
+    zh: "面向高级用户的 LLM 前端。"
+    tr: "LLM frontend for power users."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  website: https://docs.sillytavern.app/
+  github: https://github.com/SillyTavern/SillyTavern
+  document: https://docs.sillytavern.app/
