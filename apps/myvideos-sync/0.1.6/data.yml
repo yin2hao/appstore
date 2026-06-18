@@ -56,7 +56,7 @@ additionalProperties:
       labelEn: "Parallel Scans"
       labelZh: "并发扫描数"
       required: true
-      type: number
+      type: website
       label:
         en: "Parallel Scans"
         es-es: "Parallel Scans"
@@ -73,7 +73,7 @@ additionalProperties:
       labelEn: "Parallel Copies"
       labelZh: "并发复制数"
       required: true
-      type: number
+      type: website
       label:
         en: "Parallel Copies"
         es-es: "Parallel Copies"
@@ -238,4 +238,4 @@ additionalProperties:
         tr: "Bağlantı Noktası"
       required: true
       rule: paramPort
-      type: number
+      type: website

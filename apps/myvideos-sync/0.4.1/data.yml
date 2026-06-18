@@ -17,7 +17,7 @@ additionalProperties:
         tr: "Bağlantı Noktası"
       required: true
       rule: paramPort
-      type: number
+      type: website
     - default: change-this-token
       envKey: MYVIDEOS_SYNC_API_TOKEN
       labelEn: "API Token"
@@ -57,7 +57,7 @@ additionalProperties:
       labelEn: "Parallel Scans"
       labelZh: "并发扫描数"
       required: false
-      type: number
+      type: website
       label:
         en: "Parallel Scans"
         es-es: "Parallel Scans"
@@ -74,7 +74,7 @@ additionalProperties:
       labelEn: "Parallel Copies"
       labelZh: "并发复制数"
       required: false
-      type: number
+      type: website
       label:
         en: "Parallel Copies"
         es-es: "Parallel Copies"
@@ -125,7 +125,7 @@ additionalProperties:
       labelEn: "Chunk Size"
       labelZh: "分块大小"
       required: false
-      type: number
+      type: website
       label:
         en: "Chunk Size"
         es-es: "Chunk Size"
@@ -142,7 +142,7 @@ additionalProperties:
       labelEn: "Initial Speed Limit"
       labelZh: "初始限速"
       required: false
-      type: number
+      type: website
       label:
         en: "Initial Speed Limit"
         es-es: "Initial Speed Limit"

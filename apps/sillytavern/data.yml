@@ -23,7 +23,7 @@ additionalProperties:
     zh-Hant: "面向進階使用者的 LLM 前端。"
     zh: "面向高级用户的 LLM 前端。"
     tr: "LLM frontend for power users."
-  type: tool
+  type: website
   crossVersionUpdate: true
   limit: 0
   architectures:
