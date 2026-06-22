@@ -11,6 +11,11 @@ additionalProperties:
     - AI
     - Tool
   shortDescZh: "面向高级用户的 LLM 前端。"
+
+
+
+
+
   shortDescEn: "LLM frontend for power users."
   description:
     en: "LLM frontend for power users."
