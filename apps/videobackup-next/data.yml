@@ -1,0 +1,35 @@
+name: "VideoBackup Next"
+tags:
+  - Tool
+  - Storage
+  - Media
+title: "VideoBackup Next"
+description: "面向个人视频、小说与漫画的自托管加密备份系统。"
+additionalProperties:
+  key: videobackup-next
+  name: "VideoBackup Next"
+  tags:
+    - Tool
+    - Storage
+    - Media
+  shortDescZh: "面向个人视频、小说与漫画的自托管加密备份系统。"
+  shortDescEn: "Self-hosted encrypted backup for personal videos, novels, and comics."
+  description:
+    en: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    es-es: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    ja: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    ms: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    pt-br: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    ru: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    ko: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+    zh-Hant: "面向個人影片、小說與漫畫的自託管加密備份系統。"
+    zh: "面向个人视频、小说与漫画的自托管加密备份系统。"
+    tr: "A self-hosted encrypted backup system for personal videos, novels, and comics."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+  website: https://github.com/yin2hao-Myvideos/Myvideos-TS
+  github: https://github.com/yin2hao-Myvideos/Myvideos-TS
+  document: "https://github.com/yin2hao-Myvideos/Myvideos-TS#readme"
