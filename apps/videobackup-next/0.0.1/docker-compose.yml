@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: yin2hao/videobackup-frontend:0.0.1
+    image: yin2hao/videobackup-frontend:0.1.0
     container_name: "${CONTAINER_NAME}"
     restart: always
     networks:
