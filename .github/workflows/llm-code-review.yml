@@ -27,9 +27,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.LLM_API_KEY }}
           LANGUAGE: Chinese
           OPENAI_API_ENDPOINT: ${{ secrets.LLM_BASE_URL }}
-          MODEL: openai/gpt-oss-120b
-          # Add more fallback models here, or set LLM_MODELS to override the full order.
-          FALLBACK_MODELS: z-ai/glm5.1,qwen/qwen3.5-397b-a17b
           REVIEW_POLICY: relaxed
           PROMPT: "请把以下 PR 作为一个整体进行审查。只有当 PR 引入超高危漏洞或明确的逻辑性错误时才阻止自动合并；普通风险、优化建议、缺少测试或不确定性请作为备注说明，但仍允许合并。"
           top_p: 1

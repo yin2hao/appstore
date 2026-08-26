@@ -75,7 +75,7 @@ console.log(
 const models = getModels();
 
 if (!models.length) {
-  throw new Error('No LLM model configured. Set LLM_MODELS or MODEL.');
+  throw new Error('No LLM model configured. Add at least one model to .github/models/models.txt.');
 }
 
 console.log(`LLM review model order: ${models.join(' -> ')}`);
@@ -219,14 +219,14 @@ console.log(
 );
 
 function getModels() {
-  const explicitModels = splitList(env.LLM_MODELS || '');
-  const fallbackModels = splitList(env.FALLBACK_MODELS || '');
-  const defaultFallbackModels = ['z-ai/glm5.1', 'qwen/qwen3.5-397b-a17b'];
-  const orderedModels = explicitModels.length
-    ? explicitModels
-    : [env.MODEL || 'openai/gpt-oss-120b', ...fallbackModels, ...defaultFallbackModels];
+  const modelFilePath = env.LLM_MODELS_FILE || '.github/models/models.txt';
+  const modelFile = fs.readFileSync(modelFilePath, 'utf8');
+  const models = modelFile
+    .split(/\r?\n/)
+    .map((model) => model.trim())
+    .filter((model) => model && !model.startsWith('#'));
 
-  return [...new Set(orderedModels.filter(Boolean))];
+  return [...new Set(models)];
 }
 
 function writePullRequestMetadata(pullRequest) {
