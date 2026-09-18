@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import YAML from 'yaml';
+import YAML from '../vendor/yaml.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workflowDirectory = path.join(rootDirectory, '.github', 'workflows');

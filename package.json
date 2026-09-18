@@ -11,10 +11,8 @@
     "validate:renovate": "renovate-config-validator --strict renovate.json",
     "validate:workflows": "node scripts/github/validate-workflows.mjs"
   },
-  "dependencies": {
-    "yaml": "2.9.1"
-  },
   "devDependencies": {
-    "renovate": "44.103.0"
+    "renovate": "44.103.0",
+    "yaml": "2.9.1"
   }
 }

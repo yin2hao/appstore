@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import YAML from 'yaml';
+import YAML from '../../vendor/yaml.mjs';
 
 const CONTROL_FILE_PATTERN = /^\.renovate\/current\/[^/]+\.json$/;
 const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
