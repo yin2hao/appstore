@@ -7,3 +7,5 @@
 使用 ./script/install.sh 更新云端应用
 
 使用 ./script/update.sh 更新1panel本地应用
+
+容器镜像自动更新的控制文件、版本规则、审查与自动合并流程见 [容器编排自动更新](docs/container-update-flow.md)。
