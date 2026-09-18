@@ -1,0 +1,20 @@
+{
+  "name": "1panel-appstore-automation",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "validate:current": "node scripts/renovate/validate-current.mjs",
+    "validate:renovate": "renovate-config-validator --strict renovate.json",
+    "validate:workflows": "node scripts/github/validate-workflows.mjs"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "renovate": "44.103.0"
+  }
+}

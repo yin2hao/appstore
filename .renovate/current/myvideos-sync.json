@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "application": "myvideos-sync",
+  "release": "0.4.1",
+  "compose": "apps/myvideos-sync/0.4.1/docker-compose.yml",
+  "images": [
+    {
+      "service": "myvideos-sync",
+      "repository": "yin2hao/myvideos-sync",
+      "tag": "0.4.1"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "requireConfig": "required",
+  "allowShellExecutorForPostUpgradeCommands": false,
+  "allowedCommands": [
+    "^node scripts/renovate/post-upgrade\\.mjs$"
+  ]
+}

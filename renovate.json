@@ -1,22 +1,54 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base"],
-  "prHourlyLimit": 10,
-  "gitIgnoredAuthors": [
-    "githubaction@githubaction.com"
+  "extends": [
+    "config:recommended",
+    ":disableRateLimiting"
   ],
-  "rebaseWhen": "never",
+  "prCreation": "immediate",
+  "automerge": false,
+  "platformAutomerge": false,
+  "enabledManagers": [
+    "custom.regex"
+  ],
   "ignorePaths": [
-    "apps/mysql-cluster/**",
-    "apps/redis-cluster/**",
-    "apps/postgresql-cluster/**"
+    "apps/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Read Docker images only from current Compose manifests",
+      "managerFilePatterns": [
+        "/^\\.renovate/current/[^/]+\\.json$/"
+      ],
+      "matchStrings": [
+        "\\\"service\\\"\\s*:\\s*\\\"(?<depType>[^\\\"]+)\\\"\\s*,\\s*\\\"repository\\\"\\s*:\\s*\\\"(?<depName>[^\\\"]+)\\\"\\s*,\\s*\\\"tag\\\"\\s*:\\s*\\\"(?<currentValue>[^\\\"]+)\\\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
   ],
   "packageRules": [
     {
-      "packageNames": ["docker-compose"],
-      "automerge": false
+      "description": "One current Compose manifest per branch and pull request",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchFileNames": [
+        ".renovate/current/*.json"
+      ],
+      "groupName": "compose {{{packageFile}}}",
+      "groupSingleUpdates": true,
+      "postUpgradeTasks": {
+        "commands": [
+          "node scripts/renovate/post-upgrade.mjs"
+        ],
+        "dataFileTemplate": "{{{toJSON upgrades}}}",
+        "executionMode": "branch",
+        "fileFilters": [
+          ".renovate/current/**",
+          "apps/**"
+        ]
+      }
     }
-  ],
-  "prCreation": "immediate",
-  "platformAutomerge": false
+  ]
 }
