@@ -1,0 +1,9 @@
+{
+  "expectedAuthors": [
+    "yin2hao"
+  ],
+  "manualReviewLabel": "needs-owner-review",
+  "mergeMethod": "SQUASH",
+  "maxDiffLength": 60000,
+  "llmTimeoutMs": 60000
+}
