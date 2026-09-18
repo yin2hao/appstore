@@ -1,0 +1,16 @@
+[
+  {
+    "packageFile": ".renovate/current/example.json",
+    "depName": "example/app",
+    "depType": "application",
+    "currentValue": "4.2.5",
+    "newValue": "4.2.6"
+  },
+  {
+    "packageFile": ".renovate/current/example.json",
+    "depName": "redis",
+    "depType": "redis",
+    "currentValue": "7.4.0",
+    "newValue": "7.4.1"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "packageFile": ".renovate/current/example.json",
+    "depName": "example/app",
+    "depType": "application",
+    "currentValue": "4.2.5",
+    "newValue": "4.2.6"
+  }
+]
