@@ -38,6 +38,8 @@
       ],
       "groupName": "compose {{{packageFile}}}",
       "groupSingleUpdates": true,
+      "separateMajorMinor": false,
+      "separateMinorPatch": false,
       "postUpgradeTasks": {
         "commands": [
           "node scripts/renovate/post-upgrade.mjs"

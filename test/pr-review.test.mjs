@@ -154,6 +154,8 @@ test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', asy
   const rule = config.packageRules.find((item) => item.matchManagers?.includes('custom.regex'));
   assert.equal(rule.groupName, 'compose {{{packageFile}}}');
   assert.equal(rule.groupSingleUpdates, true);
+  assert.equal(rule.separateMajorMinor, false);
+  assert.equal(rule.separateMinorPatch, false);
   assert.equal(rule.postUpgradeTasks.executionMode, 'branch');
 });
 
