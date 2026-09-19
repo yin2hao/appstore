@@ -2,6 +2,6 @@
   "requireConfig": "required",
   "allowShellExecutorForPostUpgradeCommands": false,
   "allowedCommands": [
-    "^node scripts/renovate/post-upgrade\\.mjs$"
+    "^node \\.github/scripts/renovate/post-upgrade\\.mjs$"
   ]
 }

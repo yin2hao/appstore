@@ -7,9 +7,9 @@
   },
   "scripts": {
     "test": "node --test",
-    "validate:current": "node scripts/renovate/validate-current.mjs",
+    "validate:current": "node .github/scripts/renovate/validate-current.mjs",
     "validate:renovate": "renovate-config-validator --strict renovate.json",
-    "validate:workflows": "node scripts/github/validate-workflows.mjs"
+    "validate:workflows": "node .github/scripts/github/validate-workflows.mjs"
   },
   "devDependencies": {
     "renovate": "44.103.0",

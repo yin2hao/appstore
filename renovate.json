@@ -42,7 +42,7 @@
       "separateMinorPatch": false,
       "postUpgradeTasks": {
         "commands": [
-          "node scripts/renovate/post-upgrade.mjs"
+          "node .github/scripts/renovate/post-upgrade.mjs"
         ],
         "dataFileTemplate": "{{{toJSON upgrades}}}",
         "executionMode": "branch",

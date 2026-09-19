@@ -14,7 +14,7 @@ import {
 } from './lib/llm-review.mjs';
 
 const reviewMarker = '<!-- renovate-compose-review -->';
-const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const environment = process.env;
 
 let client;

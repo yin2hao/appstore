@@ -5,7 +5,7 @@
 Regenerate after installing dependencies:
 
 ```bash
-npx rollup scripts/vendor/yaml-entry.mjs --format es --file scripts/vendor/yaml.mjs
+npx rollup .github/scripts/vendor/yaml-entry.mjs --format es --file .github/scripts/vendor/yaml.mjs
 ```
 
 The upstream ISC license is in `YAML-LICENSE`.

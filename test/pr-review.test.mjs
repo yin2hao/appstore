@@ -8,13 +8,13 @@ import {
   PullRequestNotEligibleError,
   validatePullRequestIdentity,
   validateRenovatePullRequest,
-} from '../scripts/github/lib/pr-validation.mjs';
+} from '../.github/scripts/github/lib/pr-validation.mjs';
 import {
   manualReview,
   parseLlmReview,
   requestLlmReview,
-} from '../scripts/github/lib/llm-review.mjs';
-import { runPostUpgrade } from '../scripts/renovate/lib/compose-release.mjs';
+} from '../.github/scripts/github/lib/llm-review.mjs';
+import { runPostUpgrade } from '../.github/scripts/renovate/lib/compose-release.mjs';
 
 const fixtureRoot = path.resolve('test/fixtures/repository');
 const auxiliaryUpgrades = JSON.parse(
@@ -82,7 +82,7 @@ test('确定性校验拒绝历史目录删除和 rename', async () => {
 
 test('确定性校验拒绝脚本、workflow 和安全配置修改', async () => {
   for (const filename of [
-    'scripts/renovate/post-upgrade.mjs',
+    '.github/scripts/renovate/post-upgrade.mjs',
     '.github/workflows/renovate.yml',
     'renovate.json',
   ]) {
@@ -162,7 +162,7 @@ test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', asy
 test('self-hosted Renovate 只 allowlist 精确 Node 命令且关闭 shell executor', async () => {
   const config = JSON.parse(await readFile(path.resolve('.github/renovate-global.json'), 'utf8'));
   assert.equal(config.allowShellExecutorForPostUpgradeCommands, false);
-  assert.deepEqual(config.allowedCommands, ['^node scripts/renovate/post-upgrade\\.mjs$']);
+  assert.deepEqual(config.allowedCommands, ['^node \\.github/scripts/renovate/post-upgrade\\.mjs$']);
 });
 
 async function generatedScenario() {

@@ -13,7 +13,7 @@ import {
   runPostUpgrade,
   validateImmutableHistory,
   validateRepositoryCurrentManifests,
-} from '../scripts/renovate/lib/compose-release.mjs';
+} from '../.github/scripts/renovate/lib/compose-release.mjs';
 
 const fixtureRoot = path.resolve('test/fixtures/repository');
 const upgradeRoot = path.resolve('test/fixtures/upgrades');

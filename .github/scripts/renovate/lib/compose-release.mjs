@@ -8,6 +8,7 @@ const CONTROL_FILE_PATTERN = /^\.renovate\/current\/[^/]+\.json$/;
 const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 const DOCKER_TAG = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
+// 解析 Compose YAML，并要求存在有效 services 对象。
 export function parseCompose(source, sourceName = 'docker-compose.yml') {
   let compose;
 
@@ -28,6 +29,7 @@ export function parseCompose(source, sourceName = 'docker-compose.yml') {
   return compose;
 }
 
+// 将镜像拆分为 repository、tag 和可选 digest。
 export function parseImageReference(reference, context = 'image') {
   if (typeof reference !== 'string' || !reference.trim()) {
     throw new Error(`${context} 必须是非空字符串`);
@@ -56,6 +58,7 @@ export function parseImageReference(reference, context = 'image') {
   return { repository, tag, digest };
 }
 
+// 按 Compose 声明顺序选择第一个有效 image。
 export function findPrimaryImage(compose) {
   for (const [service, definition] of Object.entries(compose.services)) {
     if (!definition || typeof definition !== 'object' || !('image' in definition)) {
@@ -74,12 +77,14 @@ export function findPrimaryImage(compose) {
   throw new Error('Compose 中不存在具有有效 tag 的 image，无法确定 primary image');
 }
 
+// 返回 primary image tag，不强制规范版本格式。
 export function parsePrimaryVersion(image) {
   const parsed = typeof image === 'string' ? parseImageReference(image, 'primary image') : image;
   validatePrimaryVersion(parsed.tag);
   return parsed.tag;
 }
 
+// 拒绝无法安全转换为目录名的 tag。
 export function validatePrimaryVersion(version) {
   if (typeof version !== 'string' || !version) {
     throw new Error('primary image tag 不能为空');
@@ -100,6 +105,7 @@ export function validatePrimaryVersion(version) {
   return version;
 }
 
+// 解析旧格式目录和带 revision 的目录。
 export function parseReleaseDirectoryName(name, expectedPrimaryVersion) {
   if (typeof name !== 'string' || !name) {
     throw new Error('版本目录名不能为空');
@@ -135,6 +141,7 @@ export function parseReleaseDirectoryName(name, expectedPrimaryVersion) {
   return { primaryVersion: match[1], revision: Number(match[2]), legacy: false };
 }
 
+// 定位 current manifest 明确指向的版本目录。
 export async function findLatestReleaseDirectory(rootDirectory, manifest) {
   validateCurrentManifest(manifest);
   const applicationDirectory = path.join(rootDirectory, 'apps', manifest.application);
@@ -162,6 +169,7 @@ export async function findLatestReleaseDirectory(rootDirectory, manifest) {
   return { applicationDirectory, releaseDirectory, composePath };
 }
 
+// 按 primary/revision 规则计算下一个版本目录。
 export function calculateNextReleaseVersion({
   currentPrimaryVersion,
   newPrimaryVersion,
@@ -212,6 +220,7 @@ export function calculateNextReleaseVersion({
   };
 }
 
+// 将 branch 中的全部升级应用到 Compose 副本。
 export function applyImageUpgrades(compose, upgrades) {
   if (!Array.isArray(upgrades) || upgrades.length === 0) {
     throw new Error('Renovate upgrades 必须是非空数组');
@@ -261,6 +270,7 @@ export function applyImageUpgrades(compose, upgrades) {
   return { compose: result, applied };
 }
 
+// 确保新目录之外的文件均未变化。
 export function validateImmutableHistory(beforeSnapshot, afterSnapshot, ignoredPrefixes = []) {
   const before = filterSnapshot(beforeSnapshot, ignoredPrefixes);
   const after = filterSnapshot(afterSnapshot, ignoredPrefixes);
@@ -272,6 +282,7 @@ export function validateImmutableHistory(beforeSnapshot, afterSnapshot, ignoredP
   return true;
 }
 
+// 校验生成的 Compose 和 manifest 与升级计划一致。
 export function validateGeneratedRelease({ sourceCompose, generatedCompose, upgrades, manifest }) {
   const expected = applyImageUpgrades(sourceCompose, upgrades).compose;
 
@@ -283,6 +294,7 @@ export function validateGeneratedRelease({ sourceCompose, generatedCompose, upgr
   return true;
 }
 
+// 校验 current manifest 的结构和路径安全性。
 export function validateCurrentManifest(manifest) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new Error('current manifest 必须是 JSON 对象');
@@ -335,6 +347,7 @@ export function validateCurrentManifest(manifest) {
   return manifest;
 }
 
+// 校验 manifest 镜像顺序和仓库是否匹配 Compose service。
 export function validateManifestAgainstCompose(manifest, compose, options = {}) {
   validateCurrentManifest(manifest);
   const composeImages = extractComposeImages(compose);
@@ -357,6 +370,7 @@ export function validateManifestAgainstCompose(manifest, compose, options = {}) 
   return true;
 }
 
+// 按声明顺序提取所有有效 service image。
 export function extractComposeImages(compose) {
   const images = [];
   for (const [service, definition] of Object.entries(compose.services)) {
@@ -371,6 +385,7 @@ export function extractComposeImages(compose) {
   return images;
 }
 
+// 执行一次 Renovate branch 的校验、生成和持久化。
 export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }) {
   const root = path.resolve(rootDirectory);
   const packageFiles = new Set(upgrades.map((upgrade) => normalizeRepositoryPath(upgrade.packageFile)));
@@ -385,6 +400,7 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
   }
 
   const controlAbsolutePath = path.join(root, ...controlPath.split('/'));
+  // 读取 Renovate 刚刚更新的控制状态。
   const manifest = JSON.parse(await fs.readFile(controlAbsolutePath, 'utf8'));
   validateCurrentManifest(manifest);
 
@@ -400,6 +416,7 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
     }
   }
 
+  // 定位并解析不可变的源版本。
   const current = await findLatestReleaseDirectory(root, manifest);
   const sourceText = await fs.readFile(current.composePath, 'utf8');
   const sourceCompose = parseCompose(sourceText, manifest.compose);
@@ -443,6 +460,7 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
     throw new Error('current Compose 只应用了部分 Renovate upgrades，拒绝继续');
   }
 
+  // 应用所有分组镜像升级，再计算新版本目录名。
   const currentPrimary = findPrimaryImage(sourceCompose);
   const applied = applyImageUpgrades(sourceCompose, upgrades);
   const generatedCompose = applied.compose;
@@ -488,10 +506,12 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
     revisionGaps: next.revisionGaps,
   });
 
+  // dry-run 在任何磁盘修改前直接返回计划。
   if (dryRun) {
     return plan;
   }
 
+  // 创建历史快照，防止静默修改旧版本。
   const historyBefore = await snapshotDirectory(current.applicationDirectory);
   const targetStat = await statOrNull(targetDirectory);
 
@@ -520,6 +540,7 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
     manifest: nextManifest,
   });
 
+  // 新版本校验成功后才更新 current 指针。
   await fs.writeFile(controlAbsolutePath, `${JSON.stringify(nextManifest, null, 2)}\n`, 'utf8');
   const historyAfter = await snapshotDirectory(current.applicationDirectory);
   const ignoredPrefix = `${next.targetRelease}/`;
@@ -527,6 +548,7 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
   return plan;
 }
 
+// 校验所有应用的 current manifest，不修改仓库。
 export async function validateRepositoryCurrentManifests(rootDirectory) {
   const root = path.resolve(rootDirectory);
   const appsDirectory = path.join(root, 'apps');

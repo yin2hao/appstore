@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateRepositoryCurrentManifests } from './lib/compose-release.mjs';
 
-const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 try {
   const manifests = await validateRepositoryCurrentManifests(rootDirectory);
