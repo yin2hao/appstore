@@ -27,6 +27,7 @@ async function normalizeRenovateBranch({ rootDirectory: root, baseSha: base, hea
     await runGit(root, ['fetch', 'origin', '+refs/heads/' + head + ':refs/remotes/origin/renovate-normalize']);
     await runGit(root, ['worktree', 'add', '--detach', temporaryWorktree, 'refs/remotes/origin/renovate-normalize']);
     worktreeCreated = true;
+    await runGit(temporaryWorktree, ['rebase', base]);
 
     const { stdout } = await runGit(temporaryWorktree, ['diff', '--name-status', base + '...HEAD']);
     const changes = parseChanges(stdout);
@@ -68,7 +69,7 @@ async function normalizeRenovateBranch({ rootDirectory: root, baseSha: base, hea
       '-m',
       'chore: restore immutable Compose source',
     ]);
-    await runGit(temporaryWorktree, ['push', 'origin', 'HEAD:refs/heads/' + head]);
+    await runGit(temporaryWorktree, ['push', '--force-with-lease', 'origin', 'HEAD:refs/heads/' + head]);
     return { normalized: true, sourcePath };
   } finally {
     if (worktreeCreated) {
