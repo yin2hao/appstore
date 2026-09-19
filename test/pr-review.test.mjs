@@ -11,6 +11,7 @@ import {
   validatePullRequestIdentity,
   validateRenovatePullRequest,
 } from '../.github/scripts/github/lib/pr-validation.mjs';
+import { getPullRequestTrigger } from '../.github/scripts/github/lib/workflow-event.mjs';
 import {
   manualReview,
   parseLlmReview,
@@ -36,6 +37,35 @@ test('LLM review CLI initializes its GitHub client before execution', async () =
       return true;
     }
   );
+});
+
+test('PR 触发器同时支持 pull_request 与成功 CI 的 workflow_run 事件', () => {
+  assert.deepEqual(getPullRequestTrigger({
+    pull_request: { number: 12, head: { sha: 'direct-head' } },
+  }), { number: 12, headSha: 'direct-head' });
+  assert.deepEqual(getPullRequestTrigger({
+    workflow_run: {
+      head_sha: 'tested-head',
+      pull_requests: [{ number: 34 }],
+    },
+  }), { number: 34, headSha: 'tested-head' });
+});
+
+test('PR 触发器拒绝未关联或关联多个 PR 的 workflow_run 事件', () => {
+  for (const pullRequests of [[], [{ number: 1 }, { number: 2 }]]) {
+    assert.throws(
+      () => getPullRequestTrigger({ workflow_run: { head_sha: 'tested-head', pull_requests: pullRequests } }),
+      PullRequestNotEligibleError
+    );
+  }
+});
+
+test('Renovate 审查只在 PR 自动化测试成功后执行', async () => {
+  const workflow = await readFile(path.resolve('.github/workflows/renovate-pr-review.yml'), 'utf8');
+  assert.match(workflow, /workflow_run:\s*\r?\n\s+workflows: \[Automation Tests\]/u);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/u);
+  assert.match(workflow, /github\.event\.workflow_run\.event == 'pull_request'/u);
+  assert.match(workflow, /Validate, review, and merge approved update/u);
 });
 
 test('只接受本仓库 renovate 分支和预期作者', () => {

@@ -7,6 +7,7 @@ import {
   validatePullRequestIdentity,
   validateRenovatePullRequest,
 } from './lib/pr-validation.mjs';
+import { getPullRequestTrigger } from './lib/workflow-event.mjs';
 import {
   buildReviewMessages,
   manualReview,
@@ -30,9 +31,7 @@ try {
   }
 
   const event = JSON.parse(await fs.readFile(environment.GITHUB_EVENT_PATH, 'utf8'));
-  if (!event.pull_request?.number) {
-    throw new PullRequestNotEligibleError('事件中没有 pull_request');
-  }
+  const trigger = getPullRequestTrigger(event);
 
   configuration = JSON.parse(
     await fs.readFile(path.join(rootDirectory, '.github', 'renovate-automation.json'), 'utf8')
@@ -43,12 +42,15 @@ try {
     apiUrl: environment.GITHUB_API_URL || 'https://api.github.com',
     graphqlUrl: environment.GITHUB_GRAPHQL_URL || 'https://api.github.com/graphql',
   });
-  pullRequest = await client.request('GET', `/pulls/${event.pull_request.number}`);
+  pullRequest = await client.request('GET', `/pulls/${trigger.number}`);
   validatePullRequestIdentity({
     pullRequest,
     repository: environment.GITHUB_REPOSITORY,
     expectedAuthors: configuration.expectedAuthors,
   });
+  if (trigger.headSha && pullRequest.head.sha !== trigger.headSha) {
+    throw new PullRequestNotEligibleError('pull request 在通过自动化测试后已更新，将等待新一轮测试');
+  }
 
   await disableExistingAutoMerge(client, pullRequest);
 
@@ -85,19 +87,12 @@ try {
   } else {
     await removeManualLabel(client, pullRequest.number, configuration.manualReviewLabel);
     await upsertReviewComment(client, pullRequest.number, review, deterministicReport);
-    await client.graphql(
-      `mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
-        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
-          pullRequest { number }
-        }
-      }`,
-      { pullRequestId: pullRequest.node_id, mergeMethod: configuration.mergeMethod }
-    );
+    await mergePullRequest(client, pullRequest, configuration.mergeMethod);
     console.log(JSON.stringify({
       event: 'renovate-pr-approved',
       pullRequest: pullRequest.number,
       headSha: pullRequest.head.sha,
-      autoMerge: 'enabled',
+      merged: true,
       deterministicReport,
       llmReview: review,
     }, null, 2));
@@ -147,6 +142,28 @@ async function disableExistingAutoMerge(github, pr) {
     }`,
     { pullRequestId: pr.node_id }
   );
+}
+
+async function mergePullRequest(github, pr, mergeMethod) {
+  const result = await github.graphql(
+    `mutation MergePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!, $mergeMethod: PullRequestMergeMethod!) {
+      mergePullRequest(input: {
+        pullRequestId: $pullRequestId,
+        expectedHeadOid: $expectedHeadOid,
+        mergeMethod: $mergeMethod
+      }) {
+        pullRequest { number merged }
+      }
+    }`,
+    {
+      pullRequestId: pr.node_id,
+      expectedHeadOid: pr.head.sha,
+      mergeMethod,
+    }
+  );
+  if (!result.mergePullRequest.pullRequest.merged) {
+    throw new Error(`Pull request #${pr.number} 未完成合并`);
+  }
 }
 
 async function ensureLabel(github, label) {
