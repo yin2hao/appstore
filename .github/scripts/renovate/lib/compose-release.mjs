@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import YAML from '../../vendor/yaml.mjs';
 
 const CONTROL_FILE_PATTERN = /^\.renovate\/current\/[^/]+\.json$/;
+const SOURCE_COMPOSE_PATTERN = /^apps\/([a-z0-9][a-z0-9-]*)\/([^/]+)\/docker-compose\.yml$/;
 const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 const DOCKER_TAG = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
@@ -139,6 +140,57 @@ export function parseReleaseDirectoryName(name, expectedPrimaryVersion) {
 
   validatePrimaryVersion(match[1]);
   return { primaryVersion: match[1], revision: Number(match[2]), legacy: false };
+}
+
+// 找出每个应用由首个镜像版本和 revision 规则确定的当前 Compose。
+export async function discoverCurrentComposeFiles(rootDirectory) {
+  const root = path.resolve(rootDirectory);
+  const appsDirectory = path.join(root, 'apps');
+  const current = [];
+
+  for (const application of await listDirectories(appsDirectory)) {
+    const applicationDirectory = path.join(appsDirectory, application);
+    const candidates = [];
+    const revisions = new Set();
+
+    for (const release of await listDirectories(applicationDirectory)) {
+      const composePath = path.join(applicationDirectory, release, 'docker-compose.yml');
+      if (!(await statOrNull(composePath))) continue;
+
+      const repositoryPath = toPosix(path.join('apps', application, release, 'docker-compose.yml'));
+      const compose = parseCompose(await fs.readFile(composePath, 'utf8'), repositoryPath);
+      const primary = findPrimaryImage(compose);
+      const parsedRelease = parseReleaseDirectoryName(release, primary.tag);
+      const revisionKey = primary.tag + '\u0000' + parsedRelease.revision;
+      if (revisions.has(revisionKey)) {
+        throw new Error('应用 ' + application + ' 存在重复的 primary version/revision: ' + release);
+      }
+      revisions.add(revisionKey);
+      candidates.push({
+        application,
+        release,
+        composePath: repositoryPath,
+        primaryTag: primary.tag,
+        revision: parsedRelease.revision,
+      });
+    }
+
+    if (candidates.length === 0) continue;
+    candidates.sort(compareComposeCandidates);
+    current.push(candidates.at(-1));
+  }
+
+  return current;
+}
+
+function compareComposeCandidates(left, right) {
+  const primary = left.primaryTag.localeCompare(right.primaryTag, 'en', {
+    numeric: true,
+    sensitivity: 'base',
+  });
+  if (primary !== 0) return primary;
+  if (left.revision !== right.revision) return left.revision - right.revision;
+  return left.release.localeCompare(right.release);
 }
 
 // 定位 current manifest 明确指向的版本目录。
@@ -395,6 +447,9 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
   }
 
   const [controlPath] = packageFiles;
+  if (SOURCE_COMPOSE_PATTERN.test(controlPath)) {
+    return runSourceComposePostUpgrade({ root, sourcePath: controlPath, upgrades, dryRun });
+  }
   if (!CONTROL_FILE_PATTERN.test(controlPath)) {
     throw new Error(`Renovate packageFile 不是受支持的 current manifest: ${controlPath}`);
   }
@@ -546,6 +601,141 @@ export async function runPostUpgrade({ rootDirectory, upgrades, dryRun = false }
   const ignoredPrefix = `${next.targetRelease}/`;
   validateImmutableHistory(historyBefore, historyAfter, [ignoredPrefix]);
   return plan;
+}
+
+async function runSourceComposePostUpgrade({ root, sourcePath, upgrades, dryRun }) {
+  const match = SOURCE_COMPOSE_PATTERN.exec(sourcePath);
+  if (!match) throw new Error('Renovate packageFile 不是受支持的 Compose 文件: ' + sourcePath);
+  const [, application, sourceRelease] = match;
+
+  for (const upgrade of upgrades) {
+    validateUpgrade(upgrade);
+    if (normalizeRepositoryPath(upgrade.packageFile) !== sourcePath) {
+      throw new Error('本次 upgrades 包含多个 Compose 文件');
+    }
+  }
+
+  const sourceAbsolutePath = path.join(root, ...sourcePath.split('/'));
+  const renovatedText = await fs.readFile(sourceAbsolutePath, 'utf8');
+  const sourceText = restoreSourceComposeText(renovatedText, upgrades);
+  const sourceCompose = parseCompose(sourceText, sourcePath);
+  const generatedCompose = parseCompose(renovatedText, sourcePath);
+  const expectedCompose = applyImageUpgrades(sourceCompose, upgrades).compose;
+  if (!isDeepStrictEqual(expectedCompose, generatedCompose)) {
+    throw new Error('Renovate 对当前 Compose 的更新与升级计划不一致');
+  }
+
+  const currentPrimary = findPrimaryImage(sourceCompose);
+  const newPrimary = findPrimaryImage(generatedCompose);
+  parseReleaseDirectoryName(sourceRelease, currentPrimary.tag);
+  const applicationDirectory = path.join(root, 'apps', application);
+  const releaseDirectories = await listDirectories(applicationDirectory);
+  const next = calculateNextReleaseVersion({
+    currentPrimaryVersion: currentPrimary.tag,
+    newPrimaryVersion: newPrimary.tag,
+    currentRelease: sourceRelease,
+    releaseDirectories,
+    allowExistingNext: true,
+  });
+  const sourceDirectory = path.join(applicationDirectory, sourceRelease);
+  const targetDirectory = path.join(applicationDirectory, next.targetRelease);
+  const targetComposePath = path.join(targetDirectory, 'docker-compose.yml');
+  const sourceFiles = await listFiles(sourceDirectory);
+  const plan = buildPlan({
+    manifest: { application },
+    sourceRelease,
+    targetRelease: next.targetRelease,
+    currentPrimary,
+    newPrimary,
+    currentRevision: next.currentRevision,
+    targetRevision: next.targetRevision,
+    upgrades,
+    plannedFiles: sourceFiles.map((file) => toPosix(path.join('apps', application, next.targetRelease, file))),
+    dryRun,
+    idempotent: false,
+    revisionGaps: next.revisionGaps,
+  });
+
+  if (dryRun) return plan;
+
+  // Renovate 先修改了历史 Compose；恢复精确的原始文本后才生成新版本目录。
+  await fs.writeFile(sourceAbsolutePath, sourceText, 'utf8');
+  const historyBefore = await snapshotDirectory(applicationDirectory);
+  const targetStat = await statOrNull(targetDirectory);
+  if (targetStat) {
+    if (!targetStat.isDirectory()) {
+      throw new Error('目标版本路径已存在但不是目录: ' + next.targetRelease);
+    }
+    await validateExistingTarget({
+      sourceDirectory,
+      targetDirectory,
+      expectedCompose: generatedCompose,
+    });
+    plan.idempotent = true;
+  } else {
+    await fs.cp(sourceDirectory, targetDirectory, { recursive: true, errorOnExist: true });
+    await fs.writeFile(targetComposePath, YAML.stringify(generatedCompose), 'utf8');
+  }
+
+  const targetManifest = {
+    schemaVersion: 1,
+    application,
+    release: next.targetRelease,
+    compose: 'apps/' + application + '/' + next.targetRelease + '/docker-compose.yml',
+    images: extractComposeImages(generatedCompose).map(({ service, repository, tag }) => ({
+      service,
+      repository,
+      tag,
+    })),
+  };
+  const writtenCompose = parseCompose(
+    await fs.readFile(targetComposePath, 'utf8'),
+    targetManifest.compose
+  );
+  validateGeneratedRelease({
+    sourceCompose,
+    generatedCompose: writtenCompose,
+    upgrades,
+    manifest: targetManifest,
+  });
+  const historyAfter = await snapshotDirectory(applicationDirectory);
+  validateImmutableHistory(historyBefore, historyAfter, [next.targetRelease + '/']);
+  return plan;
+}
+
+function restoreSourceComposeText(renovatedText, upgrades) {
+  const replacements = new Map();
+  for (const upgrade of upgrades) {
+    const key = upgrade.depName + '\u0000' + upgrade.newValue;
+    const existing = replacements.get(key);
+    if (existing && existing !== upgrade.currentValue) {
+      throw new Error('同一镜像的新 tag 对应多个旧 tag，无法安全恢复历史 Compose');
+    }
+    replacements.set(key, upgrade.currentValue);
+  }
+
+  let restored = renovatedText;
+  for (const [key, currentValue] of replacements) {
+    const [repository, newValue] = key.split('\u0000');
+    const pattern = new RegExp(
+      '(^\\s*image:\\s*["\\x27]?' + escapeRegExp(repository) + ':)' +
+      escapeRegExp(newValue) + '(?=["\\x27\\s@]|$)',
+      'gmu'
+    );
+    let count = 0;
+    restored = restored.replace(pattern, (value, prefix) => {
+      count += 1;
+      return prefix + currentValue;
+    });
+    if (count === 0) {
+      throw new Error('未在 Compose 中找到 Renovate 更新后的镜像: ' + repository + ':' + newValue);
+    }
+  }
+  return restored;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^{}$()|[\]\\]/gu, '\\$&');
 }
 
 // 校验所有应用的 current manifest，不修改仓库。

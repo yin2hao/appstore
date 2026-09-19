@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   applyImageUpgrades,
   calculateNextReleaseVersion,
+  discoverCurrentComposeFiles,
   findPrimaryImage,
   parseCompose,
   parsePrimaryVersion,
@@ -264,6 +265,19 @@ test('immutable history 快照检测修改和删除', () => {
   assert.throws(
     () => validateImmutableHistory({ '1/a': 'x' }, { '1/a': 'y' }),
     /历史版本目录/u
+  );
+});
+
+test('前处理按首个镜像版本和 revision 选择当前 Compose', async () => {
+  const root = await copyFixture();
+  const current = await discoverCurrentComposeFiles(root);
+  assert.deepEqual(
+    current.map(({ application, release, composePath }) => ({ application, release, composePath })),
+    [{
+      application: 'example',
+      release: '4.2.5-1',
+      composePath: 'apps/example/4.2.5-1/docker-compose.yml',
+    }]
   );
 });
 

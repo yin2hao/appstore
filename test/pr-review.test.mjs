@@ -114,6 +114,18 @@ test('确定性校验接受正确的辅助镜像 release PR', async () => {
   ]);
 });
 
+test('临时前处理不提交 current manifest 也能校验新增版本目录', async () => {
+  const scenario = await generatedSourceComposeScenario();
+  const report = await validateScenario(scenario);
+  assert.equal(report.application, 'example');
+  assert.equal(report.controlPath, '');
+  assert.equal(report.currentRelease, '4.2.5-1');
+  assert.equal(report.targetRelease, '4.2.6-1');
+  assert.deepEqual(report.upgrades, [
+    { service: 'application', repository: 'example/app', currentValue: '4.2.5', newValue: '4.2.6' },
+  ]);
+});
+
 test('确定性校验拒绝历史版本修改', async () => {
   const scenario = await generatedScenario();
   const historicalPath = 'apps/example/4.2.5-1/data.yml';
@@ -237,7 +249,7 @@ test('LLM timeout 和 API failure 均抛错以进入 manual', async () => {
   );
 });
 
-test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', async () => {
+test('Renovate 配置只扫描前处理选出的当前 Compose', async () => {
   const config = JSON.parse(await readFile(path.resolve('renovate.json'), 'utf8'));
   assert.ok(config.extends.includes(':disableRateLimiting'));
   assert.equal(config.automerge, false);
@@ -246,15 +258,22 @@ test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', asy
   assert.equal(config.branchConcurrentLimit, 0);
   assert.equal(config.prConcurrentLimit, 0);
   assert.deepEqual(config.enabledManagers, ['custom.regex']);
-  assert.deepEqual(config.ignorePaths, ['apps/**']);
+  assert.equal(config.ignorePaths, undefined);
   const rule = config.packageRules.find((item) => item.matchManagers?.includes('custom.regex'));
   assert.equal(
     rule.groupName,
-    "{{{replace '^\\.renovate/current/|\\.json$' '' packageFile}}} tag"
+    "{{{replace '^apps/([^/]+)/.*$' '$1' packageFile}}} tag"
   );
-  const titleTopic = '.renovate/current/videobackup-next.json'
-    .replace(/^\.renovate\/current\/|\.json$/gu, '') + ' tag';
+  const titleTopic = 'apps/videobackup-next/1.0.0-1/docker-compose.yml'
+    .replace(/^apps\/([^/]+)\/.*$/u, '$1') + ' tag';
   assert.equal(titleTopic, 'videobackup-next tag');
+  assert.deepEqual(rule.matchFileNames, ['apps/*/*/docker-compose.yml']);
+  const compose = await readFile(path.join(fixtureRoot, 'apps/example/4.2.5-1/docker-compose.yml'), 'utf8');
+  const matches = [...compose.matchAll(new RegExp(config.customManagers[0].matchStrings[0], 'g'))];
+  assert.deepEqual(
+    matches.map((match) => match.groups.depType),
+    ['application', 'redis', 'postgres']
+  );
   assert.equal(rule.groupSingleUpdates, true);
   assert.equal(rule.separateMajorMinor, false);
   assert.equal(rule.separateMinorPatch, false);
@@ -272,6 +291,35 @@ async function generatedScenario() {
   await cp(fixtureRoot, root, { recursive: true });
   const base = await snapshot(root);
   await runPostUpgrade({ rootDirectory: root, upgrades: auxiliaryUpgrades });
+  const head = await snapshot(root);
+  const changedFiles = [];
+  for (const [filename] of head.tree) {
+    if (!base.tree.has(filename)) {
+      changedFiles.push({ filename, status: 'added', patch: '+added' });
+    } else if (base.tree.get(filename).sha !== head.tree.get(filename).sha) {
+      changedFiles.push({ filename, status: 'modified', patch: '+modified' });
+    }
+  }
+  return { base, head, changedFiles };
+}
+
+async function generatedSourceComposeScenario() {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'appstore-source-pr-fixture-'));
+  await cp(fixtureRoot, root, { recursive: true });
+  const sourcePath = path.join(root, 'apps/example/4.2.5-1/docker-compose.yml');
+  const base = await snapshot(root);
+  const sourceText = await readFile(sourcePath, 'utf8');
+  await writeFile(sourcePath, sourceText.replace('example/app:4.2.5', 'example/app:4.2.6'), 'utf8');
+  await runPostUpgrade({
+    rootDirectory: root,
+    upgrades: [{
+      packageFile: 'apps/example/4.2.5-1/docker-compose.yml',
+      depName: 'example/app',
+      depType: 'application',
+      currentValue: '4.2.5',
+      newValue: '4.2.6',
+    }],
+  });
   const head = await snapshot(root);
   const changedFiles = [];
   for (const [filename] of head.tree) {

@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   applyImageUpgrades,
   calculateNextReleaseVersion,
+  extractComposeImages,
   findPrimaryImage,
   parseCompose,
   validateCurrentManifest,
@@ -10,6 +11,7 @@ import {
 } from '../../renovate/lib/compose-release.mjs';
 
 const CONTROL_PATTERN = /^\.renovate\/current\/([^/]+)\.json$/;
+const SOURCE_COMPOSE_PATTERN = /^apps\/([a-z0-9][a-z0-9-]*)\/([^/]+)\/docker-compose\.yml$/;
 
 export class PullRequestNotEligibleError extends Error {}
 
@@ -44,6 +46,9 @@ export async function validateRenovatePullRequest({
   }
 
   const controlChanges = changedFiles.filter((file) => CONTROL_PATTERN.test(file.filename));
+  if (controlChanges.length === 0) {
+    return validateSourceComposePullRequest({ changedFiles, baseTree, headTree, readBaseText, readHeadText });
+  }
   if (controlChanges.length !== 1) {
     throw new Error(`PR 必须且只能修改一个 current manifest，实际为 ${controlChanges.length} 个`);
   }
@@ -152,6 +157,112 @@ export async function validateRenovatePullRequest({
       newValue: upgrade.newValue,
     })),
     changedFiles: changedFiles.map((file) => file.filename),
+  };
+}
+
+async function validateSourceComposePullRequest({
+  changedFiles,
+  baseTree,
+  headTree,
+  readBaseText,
+  readHeadText,
+}) {
+  const targetComposeChanges = changedFiles.filter(
+    (file) => file.status === 'added' && SOURCE_COMPOSE_PATTERN.test(file.filename)
+  );
+  if (targetComposeChanges.length !== 1) {
+    throw new Error('PR 必须且只能新增一个应用版本 Compose 文件');
+  }
+
+  const targetComposePath = targetComposeChanges[0].filename;
+  const [, application, targetRelease] = SOURCE_COMPOSE_PATTERN.exec(targetComposePath);
+  const targetPrefix = 'apps/' + application + '/' + targetRelease + '/';
+  for (const file of changedFiles) {
+    if (!file.filename.startsWith(targetPrefix) || file.status !== 'added') {
+      throw new Error('存在超出当前应用新版本目录范围的修改: ' + file.filename);
+    }
+  }
+  if ([...baseTree.keys()].some((file) => file.startsWith(targetPrefix))) {
+    throw new Error('目标版本目录在 base 中已经存在: ' + targetPrefix.slice(0, -1));
+  }
+
+  assertHistoricalFilesUnchanged({ baseTree, headTree, application, targetPrefix });
+  const targetCompose = parseCompose(await readHeadText(targetComposePath), targetComposePath);
+  const candidates = [];
+  for (const sourceRelease of collectReleaseDirectories(baseTree, application)) {
+    const sourcePrefix = 'apps/' + application + '/' + sourceRelease + '/';
+    try {
+      assertCompleteCopy({ baseTree, headTree, sourcePrefix, targetPrefix });
+      const sourceComposePath = sourcePrefix + 'docker-compose.yml';
+      const sourceCompose = parseCompose(await readBaseText(sourceComposePath), sourceComposePath);
+      const baseManifest = createComposeManifest(application, sourceRelease, sourceComposePath, sourceCompose);
+      const headManifest = createComposeManifest(application, targetRelease, targetComposePath, targetCompose);
+      const upgrades = buildManifestUpgrades(baseManifest, headManifest, sourceComposePath);
+      validateGeneratedRelease({
+        sourceCompose,
+        generatedCompose: targetCompose,
+        upgrades,
+        manifest: headManifest,
+      });
+      const currentPrimary = findPrimaryImage(sourceCompose);
+      const newPrimary = findPrimaryImage(targetCompose);
+      const expected = calculateNextReleaseVersion({
+        currentPrimaryVersion: currentPrimary.tag,
+        newPrimaryVersion: newPrimary.tag,
+        currentRelease: sourceRelease,
+        releaseDirectories: collectReleaseDirectories(baseTree, application),
+      });
+      if (expected.targetRelease !== targetRelease) continue;
+      candidates.push({
+        baseManifest,
+        currentPrimary,
+        newPrimary,
+        sourcePrefix,
+        upgrades,
+        expected,
+      });
+    } catch {
+      // 不匹配的历史目录不是本次新版本的源目录。
+    }
+  }
+
+  if (candidates.length !== 1) {
+    throw new Error('无法唯一确定新版本目录的源版本');
+  }
+  const [{ baseManifest, currentPrimary, newPrimary, sourcePrefix, upgrades, expected }] = candidates;
+  return {
+    application,
+    controlPath: '',
+    currentRelease: baseManifest.release,
+    targetRelease,
+    sourceDirectory: sourcePrefix.slice(0, -1),
+    targetDirectory: targetPrefix.slice(0, -1),
+    currentPrimaryImage: currentPrimary.repository + ':' + currentPrimary.tag,
+    newPrimaryImage: newPrimary.repository + ':' + newPrimary.tag,
+    currentRevision: expected.currentRevision,
+    targetRevision: expected.targetRevision,
+    revisionGaps: expected.revisionGaps,
+    upgrades: upgrades.map((upgrade) => ({
+      service: upgrade.depType,
+      repository: upgrade.depName,
+      currentValue: upgrade.currentValue,
+      newValue: upgrade.newValue,
+    })),
+    changedFiles: changedFiles.map((file) => file.filename),
+  };
+}
+
+function createComposeManifest(application, release, composePath, compose) {
+  return {
+    schemaVersion: 1,
+    application,
+    release,
+    compose: composePath,
+    images: extractComposeImages(compose).map(({ service, repository, tag }) => ({
+      service,
+      repository,
+      tag,
+    })),
   };
 }
 
