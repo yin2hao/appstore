@@ -7,6 +7,11 @@ import {
   validatePullRequestIdentity,
   validateRenovatePullRequest,
 } from './lib/pr-validation.mjs';
+import {
+  buildRenovatePullRequestTitle,
+  decideAutoMergePolicy,
+  getRenovateBranchDeletionPath,
+} from './lib/merge-policy.mjs';
 import { getPullRequestTrigger } from './lib/workflow-event.mjs';
 import {
   buildReviewMessages,
@@ -69,6 +74,7 @@ try {
     readBaseText: baseReader,
     readHeadText: headReader,
   });
+  await updatePullRequestTitle(client, pullRequest, deterministicReport);
   const diff = buildCompleteDiff(changedFiles, configuration.maxDiffLength);
   const models = await readModels(path.join(rootDirectory, '.github', 'models', 'models.txt'));
   if (models.length === 0) throw new Error('没有配置 LLM model');
@@ -87,12 +93,41 @@ try {
   } else {
     await removeManualLabel(client, pullRequest.number, configuration.manualReviewLabel);
     await upsertReviewComment(client, pullRequest.number, review, deterministicReport);
+    const mergePolicy = decideAutoMergePolicy(deterministicReport.upgrades);
+    if (!mergePolicy.autoMerge) {
+      const manual = manualReview(
+        review.summary + '。' + mergePolicy.summary + '，已转入 owner review。',
+        [...review.risks, mergePolicy.summary],
+        review.findings
+      );
+      await handleManualReview({
+        client,
+        pullRequest,
+        configuration,
+        review: manual,
+        deterministicReport,
+        baseTree,
+      });
+      console.log(JSON.stringify({
+        event: 'renovate-pr-awaiting-owner-review',
+        pullRequest: pullRequest.number,
+        headSha: pullRequest.head.sha,
+        autoMerge: false,
+        mergePolicy,
+        deterministicReport,
+        llmReview: review,
+      }, null, 2));
+      return;
+    }
     await mergePullRequest(client, pullRequest, configuration.mergeMethod);
+    const branchDeleted = await deletePullRequestBranch(client, pullRequest);
     console.log(JSON.stringify({
       event: 'renovate-pr-approved',
       pullRequest: pullRequest.number,
       headSha: pullRequest.head.sha,
       merged: true,
+      branchDeleted,
+      mergePolicy,
       deterministicReport,
       llmReview: review,
     }, null, 2));
@@ -164,6 +199,24 @@ async function mergePullRequest(github, pr, mergeMethod) {
   if (!result.mergePullRequest.pullRequest.merged) {
     throw new Error(`Pull request #${pr.number} 未完成合并`);
   }
+}
+
+async function deletePullRequestBranch(github, pr) {
+  try {
+    await github.request('DELETE', getRenovateBranchDeletionPath(pr.head.ref));
+    return true;
+  } catch (error) {
+    if (error.status === 404) return true;
+    throw error;
+  }
+}
+
+async function updatePullRequestTitle(github, pr, deterministicReport) {
+  const title = buildRenovatePullRequestTitle(deterministicReport);
+  if (pr.title === title) return title;
+  await github.request('PATCH', '/pulls/' + pr.number, { title });
+  pr.title = title;
+  return title;
 }
 
 async function ensureLabel(github, label) {

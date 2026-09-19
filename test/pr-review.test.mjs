@@ -11,6 +11,11 @@ import {
   validatePullRequestIdentity,
   validateRenovatePullRequest,
 } from '../.github/scripts/github/lib/pr-validation.mjs';
+import {
+  buildRenovatePullRequestTitle,
+  decideAutoMergePolicy,
+  getRenovateBranchDeletionPath,
+} from '../.github/scripts/github/lib/merge-policy.mjs';
 import { getPullRequestTrigger } from '../.github/scripts/github/lib/workflow-event.mjs';
 import {
   manualReview,
@@ -98,6 +103,8 @@ test('确定性校验接受正确的辅助镜像 release PR', async () => {
   const scenario = await generatedScenario();
   const report = await validateScenario(scenario);
   assert.equal(report.application, 'example');
+  assert.equal(report.currentRelease, '4.2.5-1');
+  assert.equal(report.targetRelease, '4.2.5-2');
   assert.equal(report.sourceDirectory, 'apps/example/4.2.5-1');
   assert.equal(report.targetDirectory, 'apps/example/4.2.5-2');
   assert.equal(report.currentRevision, 1);
@@ -146,6 +153,45 @@ test('确定性校验拒绝不完整的新版本目录', async () => {
   scenario.head.contents.delete(missing);
   scenario.changedFiles = scenario.changedFiles.filter((file) => file.filename !== missing);
   await assert.rejects(() => validateScenario(scenario), /完整副本/u);
+});
+
+test('非大版本镜像更新自动合并，大版本和无法分类的 tag 转入人工审查', () => {
+  const minorPolicy = decideAutoMergePolicy([
+    { repository: 'example/app', currentValue: '1.2.3', newValue: '1.3.0' },
+    { repository: 'example/sidecar', currentValue: '1.2.3', newValue: '1.2.4' },
+  ]);
+  assert.deepEqual(minorPolicy, {
+    autoMerge: true,
+    category: 'non-major',
+    summary: '所有镜像均为非大版本更新',
+  });
+
+  const majorPolicy = decideAutoMergePolicy([
+    { repository: 'example/app', currentValue: '1.2.3', newValue: '2.0.0' },
+  ]);
+  assert.equal(majorPolicy.autoMerge, false);
+  assert.equal(majorPolicy.category, 'major');
+
+  const unclassifiedPolicy = decideAutoMergePolicy([
+    { repository: 'example/app', currentValue: 'latest', newValue: '1.2.3' },
+  ]);
+  assert.equal(unclassifiedPolicy.autoMerge, false);
+  assert.equal(unclassifiedPolicy.category, 'unclassified');
+});
+
+test('PR 标题使用首个镜像版本和更新次数组成的 release 名称', () => {
+  assert.equal(
+    buildRenovatePullRequestTitle({ application: 'videobackup-next', targetRelease: '1.0.0-1' }),
+    'chore(deps): update videobackup-next tag to 1.0.0-1'
+  );
+});
+
+test('自动合并后仅删除受信任的 Renovate 分支', () => {
+  assert.equal(
+    getRenovateBranchDeletionPath('renovate/videobackup-next-tag-1.x'),
+    '/git/refs/heads/renovate/videobackup-next-tag-1.x'
+  );
+  assert.throws(() => getRenovateBranchDeletionPath('feature/keep-me'), /只允许删除/u);
 });
 
 test('LLM approve 和 manual JSON 均可严格解析', () => {

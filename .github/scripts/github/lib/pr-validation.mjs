@@ -136,6 +136,8 @@ export async function validateRenovatePullRequest({
   return {
     application,
     controlPath,
+    currentRelease: baseManifest.release,
+    targetRelease: headManifest.release,
     sourceDirectory: sourcePrefix.slice(0, -1),
     targetDirectory: targetPrefix.slice(0, -1),
     currentPrimaryImage: `${currentPrimary.repository}:${currentPrimary.tag}`,
