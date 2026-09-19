@@ -6,6 +6,7 @@
   ],
   "prCreation": "immediate",
   "automerge": false,
+  "platformAutomerge": false,
   "recreateWhen": "always",
   "branchConcurrentLimit": 0,
   "prConcurrentLimit": 0,
