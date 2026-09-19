@@ -166,6 +166,9 @@ test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', asy
   assert.ok(config.extends.includes(':disableRateLimiting'));
   assert.equal(config.automerge, false);
   assert.equal(config.platformAutomerge, false);
+  assert.equal(config.recreateWhen, 'always');
+  assert.equal(config.branchConcurrentLimit, 0);
+  assert.equal(config.prConcurrentLimit, 0);
   assert.deepEqual(config.enabledManagers, ['custom.regex']);
   assert.deepEqual(config.ignorePaths, ['apps/**']);
   const rule = config.packageRules.find((item) => item.matchManagers?.includes('custom.regex'));
