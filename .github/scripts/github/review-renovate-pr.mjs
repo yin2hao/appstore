@@ -9,7 +9,6 @@ import {
 } from './lib/pr-validation.mjs';
 import {
   buildRenovatePullRequestTitle,
-  decideAutoMergePolicy,
   getRenovateBranchDeletionPath,
 } from './lib/merge-policy.mjs';
 import { getPullRequestTrigger } from './lib/workflow-event.mjs';
@@ -59,22 +58,13 @@ try {
 
   await disableExistingAutoMerge(client, pullRequest);
 
-  const [changedFiles, loadedBaseTree, headTree] = await Promise.all([
+  const [changedFiles, loadedBaseTree] = await Promise.all([
     client.paginate(`/pulls/${pullRequest.number}/files`),
     client.getTree(pullRequest.base.sha),
-    client.getTree(pullRequest.head.sha),
   ]);
   baseTree = loadedBaseTree;
-  const baseReader = createTreeReader(client, baseTree);
-  const headReader = createTreeReader(client, headTree);
-  const deterministicReport = await validateRenovatePullRequest({
-    changedFiles,
-    baseTree,
-    headTree,
-    readBaseText: baseReader,
-    readHeadText: headReader,
-  });
-  await updatePullRequestTitle(client, pullRequest, deterministicReport);
+  const reviewContext = validateRenovatePullRequest({ changedFiles });
+  await updatePullRequestTitle(client, pullRequest, reviewContext);
   const diff = buildCompleteDiff(changedFiles, configuration.maxDiffLength);
   const models = await readModels(path.join(rootDirectory, '.github', 'models', 'models.txt'));
   if (models.length === 0) throw new Error('没有配置 LLM model');
@@ -83,42 +73,16 @@ try {
     endpoint: environment.LLM_BASE_URL,
     apiKey: environment.LLM_API_KEY,
     model: models[0],
-    messages: buildReviewMessages({ pullRequest, deterministicReport, diff }),
+    messages: buildReviewMessages({ pullRequest, reviewContext, diff }),
     timeoutMs: configuration.llmTimeoutMs,
   });
 
   if (review.verdict !== 'approve') {
-    await handleManualReview({ client, pullRequest, configuration, review, deterministicReport, baseTree });
+    await handleManualReview({ client, pullRequest, configuration, review, reviewContext, baseTree });
     process.exitCode = 1;
   } else {
     await removeManualLabel(client, pullRequest.number, configuration.manualReviewLabel);
-    await upsertReviewComment(client, pullRequest.number, review, deterministicReport);
-    const mergePolicy = decideAutoMergePolicy(deterministicReport.upgrades);
-    if (!mergePolicy.autoMerge) {
-      const manual = manualReview(
-        review.summary + '。' + mergePolicy.summary + '，已转入 owner review。',
-        [...review.risks, mergePolicy.summary],
-        review.findings
-      );
-      await handleManualReview({
-        client,
-        pullRequest,
-        configuration,
-        review: manual,
-        deterministicReport,
-        baseTree,
-      });
-      console.log(JSON.stringify({
-        event: 'renovate-pr-awaiting-owner-review',
-        pullRequest: pullRequest.number,
-        headSha: pullRequest.head.sha,
-        autoMerge: false,
-        mergePolicy,
-        deterministicReport,
-        llmReview: review,
-      }, null, 2));
-      return;
-    }
+    await upsertReviewComment(client, pullRequest.number, review, reviewContext);
     await mergePullRequest(client, pullRequest, configuration.mergeMethod);
     const branchDeleted = await deletePullRequestBranch(client, pullRequest);
     console.log(JSON.stringify({
@@ -127,8 +91,7 @@ try {
       headSha: pullRequest.head.sha,
       merged: true,
       branchDeleted,
-      mergePolicy,
-      deterministicReport,
+      reviewContext,
       llmReview: review,
     }, null, 2));
   }
@@ -153,7 +116,7 @@ try {
 }
 }
 
-async function handleManualReview({ client: github, pullRequest: pr, configuration: config, review, deterministicReport, baseTree }) {
+async function handleManualReview({ client: github, pullRequest: pr, configuration: config, review, reviewContext, baseTree }) {
   await disableExistingAutoMerge(github, pr);
   await ensureLabel(github, config.manualReviewLabel);
   await github.request('POST', `/issues/${pr.number}/labels`, { labels: [config.manualReviewLabel] });
@@ -164,7 +127,7 @@ async function handleManualReview({ client: github, pullRequest: pr, configurati
       ? `${review.summary}。仓库存在 ${codeOwnersPath}，GitHub 将按 base branch 的 CODEOWNERS 规则请求审查。`
       : review.summary,
   };
-  await upsertReviewComment(github, pr.number, report, deterministicReport);
+  await upsertReviewComment(github, pr.number, report, reviewContext);
 }
 
 async function disableExistingAutoMerge(github, pr) {
@@ -211,8 +174,8 @@ async function deletePullRequestBranch(github, pr) {
   }
 }
 
-async function updatePullRequestTitle(github, pr, deterministicReport) {
-  const title = buildRenovatePullRequestTitle(deterministicReport);
+async function updatePullRequestTitle(github, pr, reviewContext) {
+  const title = buildRenovatePullRequestTitle(reviewContext);
   if (pr.title === title) return title;
   await github.request('PATCH', '/pulls/' + pr.number, { title });
   pr.title = title;
@@ -240,14 +203,14 @@ async function removeManualLabel(github, pullNumber, label) {
   }
 }
 
-async function upsertReviewComment(github, pullNumber, review, deterministicReport) {
+async function upsertReviewComment(github, pullNumber, review, reviewContext) {
   const comments = await github.paginate(`/issues/${pullNumber}/comments`);
   const existing = comments.find((comment) => comment.body?.includes(reviewMarker));
   const body = `${reviewMarker}
 ## 容器编排自动审查
 
 \`\`\`json
-${JSON.stringify({ ...review, deterministic: deterministicReport || null }, null, 2)}
+${JSON.stringify({ ...review, context: reviewContext || null }, null, 2)}
 \`\`\`
 `;
   if (existing) {
@@ -257,26 +220,14 @@ ${JSON.stringify({ ...review, deterministic: deterministicReport || null }, null
   }
 }
 
-function createTreeReader(github, tree) {
-  const cache = new Map();
-  return async (file) => {
-    if (cache.has(file)) return cache.get(file);
-    const entry = tree.get(file);
-    if (!entry || entry.type !== 'blob') throw new Error(`Git tree 中找不到文件: ${file}`);
-    const text = await github.getBlobText(entry.sha);
-    cache.set(file, text);
-    return text;
-  };
-}
-
 function buildCompleteDiff(files, maximumLength) {
   const chunks = [];
   let length = 0;
   for (const file of files) {
-    // GitHub omits patch for empty or binary files; deterministic validation still covers them.
+    // GitHub omits patch for empty or binary files; keep the file in the LLM context.
     const patch = typeof file.patch === 'string'
       ? file.patch
-      : '[No text patch provided by GitHub; deterministic tree validation covered this file.]';
+      : '[No text patch provided by GitHub.]';
     const chunk = [
       `diff --git a/${file.previous_filename || file.filename} b/${file.filename}`,
       `status: ${file.status}`,
@@ -371,11 +322,6 @@ class GitHubClient {
     );
   }
 
-  async getBlobText(sha) {
-    const blob = await this.request('GET', `/git/blobs/${sha}`);
-    if (blob.encoding !== 'base64') throw new Error(`Git blob ${sha} 使用未知编码 ${blob.encoding}`);
-    return Buffer.from(blob.content.replace(/\n/gu, ''), 'base64').toString('utf8');
-  }
 }
 
 await main();

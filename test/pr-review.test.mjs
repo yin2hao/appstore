@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { mkdtemp, cp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
@@ -13,7 +11,6 @@ import {
 } from '../.github/scripts/github/lib/pr-validation.mjs';
 import {
   buildRenovatePullRequestTitle,
-  decideAutoMergePolicy,
   getRenovateBranchDeletionPath,
 } from '../.github/scripts/github/lib/merge-policy.mjs';
 import { getPullRequestTrigger } from '../.github/scripts/github/lib/workflow-event.mjs';
@@ -22,12 +19,8 @@ import {
   parseLlmReview,
   requestLlmReview,
 } from '../.github/scripts/github/lib/llm-review.mjs';
-import { runPostUpgrade } from '../.github/scripts/renovate/lib/compose-release.mjs';
 
 const fixtureRoot = path.resolve('test/fixtures/repository');
-const auxiliaryUpgrades = JSON.parse(
-  await readFile(path.resolve('test/fixtures/upgrades/auxiliary.json'), 'utf8')
-);
 const execFileAsync = promisify(execFile);
 
 test('LLM review CLI initializes its GitHub client before execution', async () => {
@@ -99,99 +92,45 @@ test('fork、错误分支或非预期作者不进入审查', () => {
   }
 });
 
-test('确定性校验接受正确的辅助镜像 release PR', async () => {
-  const scenario = await generatedScenario();
-  const report = await validateScenario(scenario);
-  assert.equal(report.application, 'example');
-  assert.equal(report.currentRelease, '4.2.5-1');
-  assert.equal(report.targetRelease, '4.2.5-2');
-  assert.equal(report.sourceDirectory, 'apps/example/4.2.5-1');
-  assert.equal(report.targetDirectory, 'apps/example/4.2.5-2');
-  assert.equal(report.currentRevision, 1);
-  assert.equal(report.targetRevision, 2);
-  assert.deepEqual(report.upgrades, [
-    { service: 'redis', repository: 'redis', currentValue: '7.4.0', newValue: '7.4.1' },
-  ]);
-});
-
-test('临时前处理不提交 current manifest 也能校验新增版本目录', async () => {
-  const scenario = await generatedSourceComposeScenario();
-  const report = await validateScenario(scenario);
-  assert.equal(report.application, 'example');
-  assert.equal(report.controlPath, '');
-  assert.equal(report.currentRelease, '4.2.5-1');
-  assert.equal(report.targetRelease, '4.2.6-1');
-  assert.deepEqual(report.upgrades, [
-    { service: 'application', repository: 'example/app', currentValue: '4.2.5', newValue: '4.2.6' },
-  ]);
-});
-
-test('确定性校验拒绝历史版本修改', async () => {
-  const scenario = await generatedScenario();
-  const historicalPath = 'apps/example/4.2.5-1/data.yml';
-  scenario.head.contents.set(historicalPath, 'changed: true\n');
-  scenario.head.tree.set(historicalPath, entry('changed: true\n'));
-  scenario.changedFiles.push({ filename: historicalPath, status: 'modified', patch: '+changed' });
-  await assert.rejects(() => validateScenario(scenario), /超出.*范围|历史版本/u);
-});
-
-test('确定性校验拒绝历史目录删除和 rename', async () => {
-  const scenario = await generatedScenario();
-  scenario.changedFiles.push({
-    filename: 'apps/example/old/data.yml',
-    previous_filename: 'apps/example/4.2.5-1/data.yml',
-    status: 'renamed',
-    patch: '',
+test('新增版本目录不依赖主分支上的 current manifest', () => {
+  const report = validateRenovatePullRequest({
+    changedFiles: [
+      { filename: 'apps/example/4.2.6-1/data.yml', status: 'added' },
+      { filename: 'apps/example/4.2.6-1/docker-compose.yml', status: 'added' },
+      { filename: 'apps/example/4.2.6-1/data/.gitkeep', status: 'added' },
+    ],
   });
-  await assert.rejects(() => validateScenario(scenario), /禁止删除或重命名/u);
-});
-
-test('确定性校验拒绝脚本、workflow 和安全配置修改', async () => {
-  for (const filename of [
-    '.github/scripts/renovate/post-upgrade.mjs',
-    '.github/workflows/renovate.yml',
-    'renovate.json',
-  ]) {
-    const scenario = await generatedScenario();
-    scenario.changedFiles.push({ filename, status: 'modified', patch: '+unsafe' });
-    await assert.rejects(() => validateScenario(scenario), /超出.*范围/u);
-  }
-});
-
-test('确定性校验拒绝不完整的新版本目录', async () => {
-  const scenario = await generatedScenario();
-  const missing = 'apps/example/4.2.5-2/data.yml';
-  scenario.head.tree.delete(missing);
-  scenario.head.contents.delete(missing);
-  scenario.changedFiles = scenario.changedFiles.filter((file) => file.filename !== missing);
-  await assert.rejects(() => validateScenario(scenario), /完整副本/u);
-});
-
-test('非大版本镜像更新自动合并，大版本和无法分类的 tag 转入人工审查', () => {
-  const minorPolicy = decideAutoMergePolicy([
-    { repository: 'example/app', currentValue: '1.2.3', newValue: '1.3.0' },
-    { repository: 'example/sidecar', currentValue: '1.2.3', newValue: '1.2.4' },
-  ]);
-  assert.deepEqual(minorPolicy, {
-    autoMerge: true,
-    category: 'non-major',
-    summary: '所有镜像均为非大版本更新',
+  assert.deepEqual(report, {
+    application: 'example',
+    targetRelease: '4.2.6-1',
+    composePath: 'apps/example/4.2.6-1/docker-compose.yml',
+    changedFiles: [
+      'apps/example/4.2.6-1/data.yml',
+      'apps/example/4.2.6-1/docker-compose.yml',
+      'apps/example/4.2.6-1/data/.gitkeep',
+    ],
   });
-
-  const majorPolicy = decideAutoMergePolicy([
-    { repository: 'example/app', currentValue: '1.2.3', newValue: '2.0.0' },
-  ]);
-  assert.equal(majorPolicy.autoMerge, false);
-  assert.equal(majorPolicy.category, 'major');
-
-  const unclassifiedPolicy = decideAutoMergePolicy([
-    { repository: 'example/app', currentValue: 'latest', newValue: '1.2.3' },
-  ]);
-  assert.equal(unclassifiedPolicy.autoMerge, false);
-  assert.equal(unclassifiedPolicy.category, 'unclassified');
 });
 
-test('PR 标题使用首个镜像版本和更新次数组成的 release 名称', () => {
+test('版本目录缺少 Compose 或包含多个 Compose 时失败', () => {
+  assert.throws(
+    () => validateRenovatePullRequest({
+      changedFiles: [{ filename: 'apps/example/4.2.6-1/data.yml', status: 'added' }],
+    }),
+    /只能新增一个版本 Compose/u
+  );
+  assert.throws(
+    () => validateRenovatePullRequest({
+      changedFiles: [
+        { filename: 'apps/example/4.2.6-1/docker-compose.yml', status: 'added' },
+        { filename: 'apps/example/4.2.7-1/docker-compose.yml', status: 'added' },
+      ],
+    }),
+    /只能新增一个版本 Compose/u
+  );
+});
+
+test('PR 标题使用应用和目标 release 名称', () => {
   assert.equal(
     buildRenovatePullRequestTitle({ application: 'videobackup-next', targetRelease: '1.0.0-1' }),
     'chore(deps): update videobackup-next tag to 1.0.0-1'
@@ -285,92 +224,6 @@ test('self-hosted Renovate 只 allowlist 精确 Node 命令且关闭 shell execu
   assert.equal(config.allowShellExecutorForPostUpgradeCommands, false);
   assert.deepEqual(config.allowedCommands, ['^node \\.github/scripts/renovate/post-upgrade\\.mjs$']);
 });
-
-async function generatedScenario() {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'appstore-pr-fixture-'));
-  await cp(fixtureRoot, root, { recursive: true });
-  const base = await snapshot(root);
-  await runPostUpgrade({ rootDirectory: root, upgrades: auxiliaryUpgrades });
-  const head = await snapshot(root);
-  const changedFiles = [];
-  for (const [filename] of head.tree) {
-    if (!base.tree.has(filename)) {
-      changedFiles.push({ filename, status: 'added', patch: '+added' });
-    } else if (base.tree.get(filename).sha !== head.tree.get(filename).sha) {
-      changedFiles.push({ filename, status: 'modified', patch: '+modified' });
-    }
-  }
-  return { base, head, changedFiles };
-}
-
-async function generatedSourceComposeScenario() {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'appstore-source-pr-fixture-'));
-  await cp(fixtureRoot, root, { recursive: true });
-  const sourcePath = path.join(root, 'apps/example/4.2.5-1/docker-compose.yml');
-  const base = await snapshot(root);
-  const sourceText = await readFile(sourcePath, 'utf8');
-  await writeFile(sourcePath, sourceText.replace('example/app:4.2.5', 'example/app:4.2.6'), 'utf8');
-  await runPostUpgrade({
-    rootDirectory: root,
-    upgrades: [{
-      packageFile: 'apps/example/4.2.5-1/docker-compose.yml',
-      depName: 'example/app',
-      depType: 'application',
-      currentValue: '4.2.5',
-      newValue: '4.2.6',
-    }],
-  });
-  const head = await snapshot(root);
-  const changedFiles = [];
-  for (const [filename] of head.tree) {
-    if (!base.tree.has(filename)) {
-      changedFiles.push({ filename, status: 'added', patch: '+added' });
-    } else if (base.tree.get(filename).sha !== head.tree.get(filename).sha) {
-      changedFiles.push({ filename, status: 'modified', patch: '+modified' });
-    }
-  }
-  return { base, head, changedFiles };
-}
-
-async function validateScenario(scenario) {
-  return validateRenovatePullRequest({
-    changedFiles: scenario.changedFiles,
-    baseTree: scenario.base.tree,
-    headTree: scenario.head.tree,
-    readBaseText: async (file) => scenario.base.contents.get(file),
-    readHeadText: async (file) => scenario.head.contents.get(file),
-  });
-}
-
-async function snapshot(root) {
-  const tree = new Map();
-  const contents = new Map();
-  await walk(root, '');
-  return { tree, contents };
-
-  async function walk(directory, prefix) {
-    for (const item of await readdir(path.join(directory, prefix))) {
-      const relative = path.join(prefix, item);
-      const absolute = path.join(directory, relative);
-      if ((await stat(absolute)).isDirectory()) {
-        await walk(directory, relative);
-      } else {
-        const normalized = relative.replaceAll('\\', '/');
-        const content = await readFile(absolute, 'utf8');
-        tree.set(normalized, entry(content));
-        contents.set(normalized, content);
-      }
-    }
-  }
-}
-
-function entry(content) {
-  return {
-    sha: createHash('sha1').update(content).digest('hex'),
-    type: 'blob',
-    mode: '100644',
-  };
-}
 
 function pullRequest() {
   return {
