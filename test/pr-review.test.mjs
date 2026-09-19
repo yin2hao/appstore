@@ -202,7 +202,13 @@ test('Renovate 配置按 control file 分组并禁用历史 Compose 扫描', asy
   assert.deepEqual(config.enabledManagers, ['custom.regex']);
   assert.deepEqual(config.ignorePaths, ['apps/**']);
   const rule = config.packageRules.find((item) => item.matchManagers?.includes('custom.regex'));
-  assert.equal(rule.groupName, 'compose {{{packageFile}}}');
+  assert.equal(
+    rule.groupName,
+    "{{{replace '^\\.renovate/current/|\\.json$' '' packageFile}}} tag"
+  );
+  const titleTopic = '.renovate/current/videobackup-next.json'
+    .replace(/^\.renovate\/current\/|\.json$/gu, '') + ' tag';
+  assert.equal(titleTopic, 'videobackup-next tag');
   assert.equal(rule.groupSingleUpdates, true);
   assert.equal(rule.separateMajorMinor, false);
   assert.equal(rule.separateMinorPatch, false);

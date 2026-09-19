@@ -39,7 +39,7 @@
       "matchFileNames": [
         ".renovate/current/*.json"
       ],
-      "groupName": "compose {{{packageFile}}}",
+      "groupName": "{{{replace '^\\.renovate/current/|\\.json$' '' packageFile}}} tag",
       "groupSingleUpdates": true,
       "separateMajorMinor": false,
       "separateMinorPatch": false,
