@@ -1,4 +1,14 @@
 services:
+  backend:
+    image: yin2hao/videobackup-backend:1.0.0
+    container_name: ${CONTAINER_NAME}-backend
+    restart: always
+    networks:
+      - 1panel-network
+    volumes:
+      - ./backend-runtime-data:/app/data
+    labels:
+      createdBy: Apps
   frontend:
     image: yin2hao/videobackup-frontend:1.0.0
     container_name: ${CONTAINER_NAME}
@@ -9,16 +19,6 @@ services:
       - ${PANEL_APP_PORT_HTTP}:80
     depends_on:
       - backend
-    labels:
-      createdBy: Apps
-  backend:
-    image: yin2hao/videobackup-backend:1.0.0
-    container_name: ${CONTAINER_NAME}-backend
-    restart: always
-    networks:
-      - 1panel-network
-    volumes:
-      - ./backend-runtime-data:/app/data
     labels:
       createdBy: Apps
 networks:
