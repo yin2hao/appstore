@@ -22,6 +22,8 @@ let pullRequest;
 let configuration;
 let baseTree;
 
+// Delay execution until the GitHubClient class declaration is initialized.
+async function main() {
 try {
   for (const name of ['GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_EVENT_PATH']) {
     if (!environment[name]) throw new Error(`${name} 不能为空`);
@@ -118,6 +120,7 @@ try {
     }
     process.exitCode = 1;
   }
+}
 }
 
 async function handleManualReview({ client: github, pullRequest: pr, configuration: config, review, deterministicReport, baseTree }) {
@@ -303,3 +306,5 @@ class GitHubClient {
     return Buffer.from(blob.content.replace(/\n/gu, ''), 'base64').toString('utf8');
   }
 }
+
+await main();

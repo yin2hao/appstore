@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { mkdtemp, cp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import test from 'node:test';
 import {
   PullRequestNotEligibleError,
@@ -20,6 +22,21 @@ const fixtureRoot = path.resolve('test/fixtures/repository');
 const auxiliaryUpgrades = JSON.parse(
   await readFile(path.resolve('test/fixtures/upgrades/auxiliary.json'), 'utf8')
 );
+const execFileAsync = promisify(execFile);
+
+test('LLM review CLI initializes its GitHub client before execution', async () => {
+  await assert.rejects(
+    () => execFileAsync(process.execPath, ['.github/scripts/github/review-renovate-pr.mjs'], {
+      env: { ...process.env, GITHUB_TOKEN: '' },
+    }),
+    (error) => {
+      const output = `${error.stdout || ''}${error.stderr || ''}`;
+      assert.match(output, /GITHUB_TOKEN 不能为空/u);
+      assert.doesNotMatch(output, /Cannot access 'GitHubClient' before initialization/u);
+      return true;
+    }
+  );
+});
 
 test('只接受本仓库 renovate 分支和预期作者', () => {
   assert.equal(validatePullRequestIdentity({
