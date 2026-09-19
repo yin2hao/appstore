@@ -27,6 +27,8 @@ async function normalizeRenovateBranch({ rootDirectory: root, baseSha: base, hea
     await runGit(root, ['fetch', 'origin', '+refs/heads/' + head + ':refs/remotes/origin/renovate-normalize']);
     await runGit(root, ['worktree', 'add', '--detach', temporaryWorktree, 'refs/remotes/origin/renovate-normalize']);
     worktreeCreated = true;
+    await runGit(temporaryWorktree, ['config', 'user.name', 'github-actions[bot]']);
+    await runGit(temporaryWorktree, ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
     await runGit(temporaryWorktree, ['rebase', base]);
 
     const { stdout } = await runGit(temporaryWorktree, ['diff', '--name-status', base + '...HEAD']);
