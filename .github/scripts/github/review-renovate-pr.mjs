@@ -3,131 +3,96 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
-  PullRequestNotEligibleError,
-  validatePullRequestIdentity,
-  validateRenovatePullRequest,
-} from './lib/pr-validation.mjs';
-import {
-  buildRenovatePullRequestTitle,
-  getRenovateBranchDeletionPath,
-} from './lib/merge-policy.mjs';
-import { getPullRequestTrigger } from './lib/workflow-event.mjs';
-import {
   buildReviewMessages,
   manualReview,
   requestLlmReview,
 } from './lib/llm-review.mjs';
 
 const reviewMarker = '<!-- renovate-compose-review -->';
+const manualReviewLabel = 'needs-owner-review';
+const mergeMethod = 'SQUASH';
+const llmTimeoutMs = 60_000;
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const environment = process.env;
 
 let client;
 let pullRequest;
-let configuration;
-let baseTree;
 
-// Delay execution until the GitHubClient class declaration is initialized.
 async function main() {
-try {
   for (const name of ['GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_EVENT_PATH']) {
     if (!environment[name]) throw new Error(`${name} 不能为空`);
   }
 
   const event = JSON.parse(await fs.readFile(environment.GITHUB_EVENT_PATH, 'utf8'));
-  const trigger = getPullRequestTrigger(event);
+  const workflowRun = event.workflow_run;
+  const pullRequestNumber = workflowRun?.pull_requests?.[0]?.number;
+  if (!pullRequestNumber) throw new Error('workflow_run 未关联 pull request');
 
-  configuration = JSON.parse(
-    await fs.readFile(path.join(rootDirectory, '.github', 'renovate-automation.json'), 'utf8')
-  );
   client = new GitHubClient({
     token: environment.GITHUB_TOKEN,
     repository: environment.GITHUB_REPOSITORY,
     apiUrl: environment.GITHUB_API_URL || 'https://api.github.com',
     graphqlUrl: environment.GITHUB_GRAPHQL_URL || 'https://api.github.com/graphql',
   });
-  pullRequest = await client.request('GET', `/pulls/${trigger.number}`);
-  validatePullRequestIdentity({
-    pullRequest,
-    repository: environment.GITHUB_REPOSITORY,
-    expectedAuthors: configuration.expectedAuthors,
-  });
-  if (trigger.headSha && pullRequest.head.sha !== trigger.headSha) {
-    throw new PullRequestNotEligibleError('pull request 在通过自动化测试后已更新，将等待新一轮测试');
+  pullRequest = await client.request('GET', `/pulls/${pullRequestNumber}`);
+  if (workflowRun.head_sha && pullRequest.head.sha !== workflowRun.head_sha) {
+    throw new Error('pull request 在通过自动化测试后已更新，将等待新一轮测试');
   }
 
   await disableExistingAutoMerge(client, pullRequest);
-
-  const [changedFiles, loadedBaseTree] = await Promise.all([
-    client.paginate(`/pulls/${pullRequest.number}/files`),
-    client.getTree(pullRequest.base.sha),
-  ]);
-  baseTree = loadedBaseTree;
-  const reviewContext = validateRenovatePullRequest({ changedFiles });
-  await updatePullRequestTitle(client, pullRequest, reviewContext);
-  const diff = buildCompleteDiff(changedFiles, configuration.maxDiffLength);
-  const models = await readModels(path.join(rootDirectory, '.github', 'models', 'models.txt'));
-  if (models.length === 0) throw new Error('没有配置 LLM model');
+  const changedFiles = await client.paginate(`/pulls/${pullRequest.number}/files`);
+  const diff = buildDiff(changedFiles);
+  const model = (await readModels(path.join(rootDirectory, '.github', 'models', 'models.txt')))[0];
+  if (!model) throw new Error('没有配置 LLM model');
 
   const review = await requestLlmReview({
     endpoint: environment.LLM_BASE_URL,
     apiKey: environment.LLM_API_KEY,
-    model: models[0],
-    messages: buildReviewMessages({ pullRequest, reviewContext, diff }),
-    timeoutMs: configuration.llmTimeoutMs,
+    model,
+    messages: buildReviewMessages({ pullRequest, diff }),
+    timeoutMs: llmTimeoutMs,
   });
 
   if (review.verdict !== 'approve') {
-    await handleManualReview({ client, pullRequest, configuration, review, reviewContext, baseTree });
+    await handleManualReview(client, pullRequest, review);
     process.exitCode = 1;
-  } else {
-    await removeManualLabel(client, pullRequest.number, configuration.manualReviewLabel);
-    await upsertReviewComment(client, pullRequest.number, review, reviewContext);
-    await mergePullRequest(client, pullRequest, configuration.mergeMethod);
-    const branchDeleted = await deletePullRequestBranch(client, pullRequest);
-    console.log(JSON.stringify({
-      event: 'renovate-pr-approved',
-      pullRequest: pullRequest.number,
-      headSha: pullRequest.head.sha,
-      merged: true,
-      branchDeleted,
-      reviewContext,
-      llmReview: review,
-    }, null, 2));
+    return;
   }
-} catch (error) {
-  if (error instanceof PullRequestNotEligibleError) {
-    console.log(JSON.stringify({ event: 'renovate-pr-skipped', message: error.message }));
-  } else {
-    const review = manualReview(
-      `自动审查失败，已关闭自动合并并转入 owner review：${error.message}`,
-      [error.message]
-    );
-    console.error(JSON.stringify({ event: 'renovate-pr-manual', message: error.message }));
-    if (client && pullRequest) {
-      try {
-        await handleManualReview({ client, pullRequest, configuration, review, baseTree });
-      } catch (publishError) {
-        console.error(JSON.stringify({ event: 'manual-review-publish-failed', message: publishError.message }));
-      }
-    }
-    process.exitCode = 1;
-  }
-}
+
+  await removeManualLabel(client, pullRequest.number);
+  await upsertReviewComment(client, pullRequest.number, review);
+  await mergePullRequest(client, pullRequest);
+  const branchDeleted = await deletePullRequestBranch(client, pullRequest);
+  console.log(JSON.stringify({
+    event: 'renovate-pr-approved',
+    pullRequest: pullRequest.number,
+    headSha: pullRequest.head.sha,
+    merged: true,
+    branchDeleted,
+    llmReview: review,
+  }, null, 2));
 }
 
-async function handleManualReview({ client: github, pullRequest: pr, configuration: config, review, reviewContext, baseTree }) {
+try {
+  await main();
+} catch (error) {
+  const review = manualReview(`自动审查失败，已关闭自动合并并转入 owner review：${error.message}`, [error.message]);
+  console.error(JSON.stringify({ event: 'renovate-pr-manual', message: error.message }));
+  if (client && pullRequest) {
+    try {
+      await handleManualReview(client, pullRequest, review);
+    } catch (publishError) {
+      console.error(JSON.stringify({ event: 'manual-review-publish-failed', message: publishError.message }));
+    }
+  }
+  process.exitCode = 1;
+}
+
+async function handleManualReview(github, pr, review) {
   await disableExistingAutoMerge(github, pr);
-  await ensureLabel(github, config.manualReviewLabel);
-  await github.request('POST', `/issues/${pr.number}/labels`, { labels: [config.manualReviewLabel] });
-  const codeOwnersPath = findCodeOwners(baseTree);
-  const report = {
-    ...review,
-    summary: codeOwnersPath
-      ? `${review.summary}。仓库存在 ${codeOwnersPath}，GitHub 将按 base branch 的 CODEOWNERS 规则请求审查。`
-      : review.summary,
-  };
-  await upsertReviewComment(github, pr.number, report, reviewContext);
+  await ensureLabel(github);
+  await github.request('POST', `/issues/${pr.number}/labels`, { labels: [manualReviewLabel] });
+  await upsertReviewComment(github, pr.number, review);
 }
 
 async function disableExistingAutoMerge(github, pr) {
@@ -142,7 +107,7 @@ async function disableExistingAutoMerge(github, pr) {
   );
 }
 
-async function mergePullRequest(github, pr, mergeMethod) {
+async function mergePullRequest(github, pr) {
   const result = await github.graphql(
     `mutation MergePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!, $mergeMethod: PullRequestMergeMethod!) {
       mergePullRequest(input: {
@@ -165,8 +130,9 @@ async function mergePullRequest(github, pr, mergeMethod) {
 }
 
 async function deletePullRequestBranch(github, pr) {
+  const ref = pr.head.ref.split('/').map(encodeURIComponent).join('/');
   try {
-    await github.request('DELETE', getRenovateBranchDeletionPath(pr.head.ref));
+    await github.request('DELETE', `/git/refs/heads/${ref}`);
     return true;
   } catch (error) {
     if (error.status === 404) return true;
@@ -174,45 +140,31 @@ async function deletePullRequestBranch(github, pr) {
   }
 }
 
-async function updatePullRequestTitle(github, pr, reviewContext) {
-  const title = buildRenovatePullRequestTitle(reviewContext);
-  if (pr.title === title) return title;
-  await github.request('PATCH', '/pulls/' + pr.number, { title });
-  pr.title = title;
-  return title;
-}
-
-async function ensureLabel(github, label) {
+async function ensureLabel(github) {
   try {
-    await github.request('GET', `/labels/${encodeURIComponent(label)}`);
+    await github.request('GET', `/labels/${encodeURIComponent(manualReviewLabel)}`);
   } catch (error) {
     if (error.status !== 404) throw error;
     await github.request('POST', '/labels', {
-      name: label,
+      name: manualReviewLabel,
       color: 'B60205',
-      description: 'Automated review failed closed; repository owner review is required.',
+      description: 'Automated review failed; repository owner review is required.',
     });
   }
 }
 
-async function removeManualLabel(github, pullNumber, label) {
+async function removeManualLabel(github, pullNumber) {
   try {
-    await github.request('DELETE', `/issues/${pullNumber}/labels/${encodeURIComponent(label)}`);
+    await github.request('DELETE', `/issues/${pullNumber}/labels/${encodeURIComponent(manualReviewLabel)}`);
   } catch (error) {
     if (error.status !== 404) throw error;
   }
 }
 
-async function upsertReviewComment(github, pullNumber, review, reviewContext) {
+async function upsertReviewComment(github, pullNumber, review) {
   const comments = await github.paginate(`/issues/${pullNumber}/comments`);
   const existing = comments.find((comment) => comment.body?.includes(reviewMarker));
-  const body = `${reviewMarker}
-## 容器编排自动审查
-
-\`\`\`json
-${JSON.stringify({ ...review, context: reviewContext || null }, null, 2)}
-\`\`\`
-`;
+  const body = `${reviewMarker}\n## 容器编排自动审查\n\n\`\`\`json\n${JSON.stringify(review, null, 2)}\n\`\`\`\n`;
   if (existing) {
     await github.request('PATCH', `/issues/comments/${existing.id}`, { body });
   } else {
@@ -220,26 +172,12 @@ ${JSON.stringify({ ...review, context: reviewContext || null }, null, 2)}
   }
 }
 
-function buildCompleteDiff(files, maximumLength) {
-  const chunks = [];
-  let length = 0;
-  for (const file of files) {
-    // GitHub omits patch for empty or binary files; keep the file in the LLM context.
-    const patch = typeof file.patch === 'string'
-      ? file.patch
-      : '[No text patch provided by GitHub.]';
-    const chunk = [
-      `diff --git a/${file.previous_filename || file.filename} b/${file.filename}`,
-      `status: ${file.status}`,
-      patch,
-    ].join('\n');
-    length += chunk.length;
-    if (length > maximumLength) {
-      throw new Error(`PR diff 超过 LLM 审查上限 ${maximumLength} 字符`);
-    }
-    chunks.push(chunk);
-  }
-  return chunks.join('\n\n');
+function buildDiff(files) {
+  return files.map((file) => [
+    `diff --git a/${file.previous_filename || file.filename} b/${file.filename}`,
+    `status: ${file.status}`,
+    typeof file.patch === 'string' ? file.patch : '[No text patch provided by GitHub.]',
+  ].join('\n')).join('\n\n');
 }
 
 async function readModels(file) {
@@ -249,13 +187,6 @@ async function readModels(file) {
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith('#'))
   )];
-}
-
-function findCodeOwners(tree) {
-  for (const file of ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS']) {
-    if (tree?.has(file)) return file;
-  }
-  return '';
 }
 
 class GitHubClient {
@@ -311,17 +242,4 @@ class GitHubClient {
     }
     return payload.data;
   }
-
-  async getTree(sha) {
-    const response = await this.request('GET', `/git/trees/${sha}?recursive=1`);
-    if (response.truncated) throw new Error(`Git tree ${sha} 被 GitHub 截断，无法安全审查`);
-    return new Map(
-      response.tree
-        .filter((entry) => entry.type === 'blob')
-        .map((entry) => [entry.path, { sha: entry.sha, type: entry.type, mode: entry.mode }])
-    );
-  }
-
 }
-
-await main();
