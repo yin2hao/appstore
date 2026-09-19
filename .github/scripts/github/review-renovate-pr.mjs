@@ -203,13 +203,14 @@ function buildCompleteDiff(files, maximumLength) {
   const chunks = [];
   let length = 0;
   for (const file of files) {
-    if (typeof file.patch !== 'string') {
-      throw new Error(`GitHub 没有返回 ${file.filename} 的完整文本 patch`);
-    }
+    // GitHub omits patch for empty or binary files; deterministic validation still covers them.
+    const patch = typeof file.patch === 'string'
+      ? file.patch
+      : '[No text patch provided by GitHub; deterministic tree validation covered this file.]';
     const chunk = [
       `diff --git a/${file.previous_filename || file.filename} b/${file.filename}`,
       `status: ${file.status}`,
-      file.patch,
+      patch,
     ].join('\n');
     length += chunk.length;
     if (length > maximumLength) {
