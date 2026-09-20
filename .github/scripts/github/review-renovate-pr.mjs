@@ -11,7 +11,7 @@ import {
 const reviewMarker = '<!-- renovate-compose-review -->';
 const manualReviewLabel = 'needs-owner-review';
 const mergeMethod = 'SQUASH';
-const llmTimeoutMs = 60_000;
+const llmTimeoutMs = 300_000;
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const environment = process.env;
 
