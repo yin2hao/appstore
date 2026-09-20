@@ -25,6 +25,25 @@ test('LLM review CLI requires a GitHub token', async () => {
   );
 });
 
+test('LLM review CLI initializes GitHubClient before executing main', async () => {
+  await assert.rejects(
+    () => execFileAsync(process.execPath, ['.github/scripts/github/review-renovate-pr.mjs'], {
+      env: {
+        ...process.env,
+        GITHUB_TOKEN: 'test-token',
+        GITHUB_REPOSITORY: 'owner/repo',
+        GITHUB_EVENT_PATH: path.resolve('package.json'),
+      },
+    }),
+    (error) => {
+      const output = `${error.stdout || ''}${error.stderr || ''}`;
+      assert.match(output, /workflow_run 未关联 pull request/u);
+      assert.doesNotMatch(output, /Cannot access 'GitHubClient' before initialization/u);
+      return true;
+    }
+  );
+});
+
 test('review workflow only runs after successful PR automation tests', async () => {
   const workflow = await readFile(path.resolve('.github/workflows/renovate-pr-review.yml'), 'utf8');
   assert.match(workflow, /workflows: \[Automation Tests\]/u);

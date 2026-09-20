@@ -73,21 +73,6 @@ async function main() {
   }, null, 2));
 }
 
-try {
-  await main();
-} catch (error) {
-  const review = manualReview(`自动审查失败，已关闭自动合并并转入 owner review：${error.message}`, [error.message]);
-  console.error(JSON.stringify({ event: 'renovate-pr-manual', message: error.message }));
-  if (client && pullRequest) {
-    try {
-      await handleManualReview(client, pullRequest, review);
-    } catch (publishError) {
-      console.error(JSON.stringify({ event: 'manual-review-publish-failed', message: publishError.message }));
-    }
-  }
-  process.exitCode = 1;
-}
-
 async function handleManualReview(github, pr, review) {
   await disableExistingAutoMerge(github, pr);
   await ensureLabel(github);
@@ -242,4 +227,19 @@ class GitHubClient {
     }
     return payload.data;
   }
+}
+
+try {
+  await main();
+} catch (error) {
+  const review = manualReview(`自动审查失败，已关闭自动合并并转入 owner review：${error.message}`, [error.message]);
+  console.error(JSON.stringify({ event: 'renovate-pr-manual', message: error.message }));
+  if (client && pullRequest) {
+    try {
+      await handleManualReview(client, pullRequest, review);
+    } catch (publishError) {
+      console.error(JSON.stringify({ event: 'manual-review-publish-failed', message: publishError.message }));
+    }
+  }
+  process.exitCode = 1;
 }
