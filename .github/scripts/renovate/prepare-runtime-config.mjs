@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { discoverCurrentComposeFiles } from './lib/compose-release.mjs';
 
+// 生成排除文件，以让 renovate只扫描最新版
 const options = parseArguments(process.argv.slice(2));
 const rootDirectory = options.root
   ? path.resolve(options.root)
