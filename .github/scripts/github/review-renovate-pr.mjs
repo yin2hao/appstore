@@ -7,6 +7,7 @@ import {
   manualReview,
   requestLlmReview,
 } from './lib/llm-review.mjs';
+import { updateRenovatePrTitle } from './lib/renovate-pr-title.mjs';
 
 const reviewMarker = '<!-- renovate-compose-review -->';
 const manualReviewLabel = 'needs-owner-review';
@@ -41,6 +42,7 @@ async function main() {
 
   await disableExistingAutoMerge(client, pullRequest);
   const changedFiles = await client.paginate(`/pulls/${pullRequest.number}/files`);
+  await updateRenovatePrTitle({ github: client, pullRequest, changedFiles });
   const diff = buildDiff(changedFiles);
   const model = (await readModels(path.join(rootDirectory, '.github', 'models', 'models.txt')))[0];
   if (!model) throw new Error('没有配置 LLM model');
