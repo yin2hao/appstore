@@ -13,15 +13,22 @@ try {
   const currentComposes = await discoverCurrentComposeFiles(rootDirectory);
   const globalConfigPath = path.join(rootDirectory, '.github', 'renovate-global.json');
   const globalConfig = JSON.parse(await fs.readFile(globalConfigPath, 'utf8'));
+  const currentComposePaths = currentComposes.map((compose) => compose.composePath);
   const runtimeConfig = {
     ...globalConfig,
-    includePaths: currentComposes.map((compose) => compose.composePath),
+    includePaths: currentComposePaths,
+    // Renovate 仍需修改 package file 后才能把 upgrades 传给 post-upgrade，
+    // 但最终提交必须排除源 Compose，只提交脚本创建的新版本目录。
+    excludeCommitPaths: [
+      ...new Set([...(globalConfig.excludeCommitPaths || []), ...currentComposePaths]),
+    ],
   };
   await fs.mkdir(path.dirname(options.output), { recursive: true });
   await fs.writeFile(options.output, `${JSON.stringify(runtimeConfig, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify({
     event: 'renovate-runtime-config-prepared',
     output: options.output,
+    excludeCommitPaths: runtimeConfig.excludeCommitPaths,
     applications: currentComposes.map(({ application, release, composePath }) => ({
       application,
       release,
