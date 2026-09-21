@@ -617,7 +617,8 @@ async function runSourceComposePostUpgrade({ root, sourcePath, upgrades, dryRun 
 
   const sourceAbsolutePath = path.join(root, ...sourcePath.split('/'));
   const renovatedText = await fs.readFile(sourceAbsolutePath, 'utf8');
-  const sourceText = restoreSourceComposeText(renovatedText, upgrades);
+  // 仅在内存中重建升级前状态，用于校验和计算目标版本；不回写源目录。
+  const sourceText = reconstructSourceComposeText(renovatedText, upgrades);
   const sourceCompose = parseCompose(sourceText, sourcePath);
   const generatedCompose = parseCompose(renovatedText, sourcePath);
   const expectedCompose = applyImageUpgrades(sourceCompose, upgrades).compose;
@@ -658,8 +659,7 @@ async function runSourceComposePostUpgrade({ root, sourcePath, upgrades, dryRun 
 
   if (dryRun) return plan;
 
-  // Renovate 先修改了历史 Compose；恢复精确的原始文本后才生成新版本目录。
-  await fs.writeFile(sourceAbsolutePath, sourceText, 'utf8');
+  // 源 Compose 由运行时 excludeCommitPaths 排除，脚本只负责创建目标版本目录。
   const historyBefore = await snapshotDirectory(applicationDirectory);
   const targetStat = await statOrNull(targetDirectory);
   if (targetStat) {
@@ -703,13 +703,13 @@ async function runSourceComposePostUpgrade({ root, sourcePath, upgrades, dryRun 
   return plan;
 }
 
-function restoreSourceComposeText(renovatedText, upgrades) {
+function reconstructSourceComposeText(renovatedText, upgrades) {
   const replacements = new Map();
   for (const upgrade of upgrades) {
     const key = upgrade.depName + '\u0000' + upgrade.newValue;
     const existing = replacements.get(key);
     if (existing && existing !== upgrade.currentValue) {
-      throw new Error('同一镜像的新 tag 对应多个旧 tag，无法安全恢复历史 Compose');
+      throw new Error('同一镜像的新 tag 对应多个旧 tag，无法重建升级前 Compose');
     }
     replacements.set(key, upgrade.currentValue);
   }
