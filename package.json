@@ -6,7 +6,6 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test",
     "validate:current": "node .github/scripts/renovate/validate-current.mjs",
     "validate:renovate": "renovate-config-validator --strict renovate.json",
     "validate:workflows": "node .github/scripts/github/validate-workflows.mjs"
