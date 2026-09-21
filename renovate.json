@@ -13,18 +13,15 @@
   "enabledManagers": [
     "custom.regex"
   ],
-  "ignorePaths": [
-    "apps/**"
-  ],
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Read Docker images only from current Compose manifests",
+      "description": "Read Docker images only from runtime-selected current Compose manifests",
       "managerFilePatterns": [
-        "/^\\.renovate\\/current\\/[^/]+\\.json$/"
+        "/^apps\\/[^/]+\\/[^/]+\\/docker-compose\\.yml$/"
       ],
       "matchStrings": [
-        "\\\"service\\\"\\s*:\\s*\\\"(?<depType>[^\\\"]+)\\\"\\s*,\\s*\\\"repository\\\"\\s*:\\s*\\\"(?<depName>[^\\\"]+)\\\"\\s*,\\s*\\\"tag\\\"\\s*:\\s*\\\"(?<currentValue>[^\\\"]+)"
+        "\\n {2}(?<depType>[A-Za-z0-9_-]+):[ \\t]*\\r?\\n(?: {4}[^\\r\\n]*\\r?\\n)*? {4}image:[ \\t]*(?<depName>[^\\s:@]+(?:/[^\\s:@]+)*):(?<currentValue>[^\\s@]+)"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
@@ -32,14 +29,14 @@
   ],
   "packageRules": [
     {
-      "description": "One current Compose manifest per branch and pull request",
+      "description": "One runtime-selected Compose release per branch and pull request",
       "matchManagers": [
         "custom.regex"
       ],
       "matchFileNames": [
-        ".renovate/current/*.json"
+        "apps/*/*/docker-compose.yml"
       ],
-      "groupName": "{{{replace '^\\.renovate/current/|\\.json$' '' packageFile}}} tag",
+      "groupName": "{{{replace '^apps/([^/]+)/.*$' '$1' packageFile}}} tag",
       "groupSingleUpdates": true,
       "separateMajorMinor": false,
       "separateMinorPatch": false,
@@ -50,7 +47,6 @@
         "dataFileTemplate": "{{{toJSON upgrades}}}",
         "executionMode": "branch",
         "fileFilters": [
-          ".renovate/current/**",
           "apps/**"
         ]
       }
