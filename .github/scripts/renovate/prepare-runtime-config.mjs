@@ -77,12 +77,9 @@ function parseArguments(args) {
 function buildNativeTitleRule({ application, composePath, primaryService, primaryTag, revision }) {
   const displayPrimaryVersion = primaryTag.replace(/^v/u, '');
   const auxiliaryTarget = `${displayPrimaryVersion}-${revision + 1}`;
-  const primaryTarget =
-    `{{#each upgrades}}{{#if (equals depType '${primaryService}')}}` +
-    "{{{replace '^v' '' newValue}}}-1{{/if}}{{/each}}";
   const targetRelease =
-    `{{#if (includes depTypes '${primaryService}')}}` +
-    `${primaryTarget}{{else}}${auxiliaryTarget}{{/if}}`;
+    `{{#if (equals depType '${primaryService}')}}` +
+    `{{{replace '^v' '' newValue}}}-1{{else}}${auxiliaryTarget}{{/if}}`;
 
   return {
     description: `Create the final ${application} PR title before opening the pull request`,
@@ -92,8 +89,10 @@ function buildNativeTitleRule({ application, composePath, primaryService, primar
     semanticCommitType: 'chore',
     semanticCommitScope: 'deps',
     commitMessageAction: 'update',
-    // groupSingleUpdates 会清空 commitMessageExtra，因此把目标编排版本放在 topic 中。
-    commitMessageTopic: `${application} tag to v${targetRelease}`,
+    // 同一应用使用固定 slug 合并；分组标题直接继承包含目标编排版本的 groupName。
+    groupName: `${application} tag to v${targetRelease}`,
+    groupSlug: `${application}-tag`,
+    groupSingleUpdates: true,
     commitMessageExtra: '',
     prTitleStrict: true,
   };
