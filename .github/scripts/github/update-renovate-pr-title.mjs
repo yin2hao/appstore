@@ -12,6 +12,9 @@ async function main() {
   const event = JSON.parse(await fs.readFile(environment.GITHUB_EVENT_PATH, 'utf8'));
   const pullRequestNumber = event.pull_request?.number;
   if (!pullRequestNumber) throw new Error('pull_request 事件未关联 pull request');
+  if (!event.pull_request.head?.ref?.startsWith('renovate/')) {
+    throw new Error(`拒绝处理非 Renovate 分支: ${event.pull_request.head?.ref || ''}`);
+  }
 
   const github = new GitHubClient({
     token: environment.GITHUB_TOKEN,
@@ -22,6 +25,9 @@ async function main() {
   const changedFiles = await github.paginate(`/pulls/${pullRequestNumber}/files`);
   const updated = await updateRenovatePrTitle({ github, pullRequest, changedFiles });
   const merged = await github.mergePullRequest(pullRequest);
+  if (merged.merged !== true) {
+    throw new Error(`GitHub 未合并 PR #${pullRequestNumber}: ${merged.message || '未知原因'}`);
+  }
   console.log(JSON.stringify({
     event: 'renovate-pr-processed',
     pullRequest: pullRequestNumber,

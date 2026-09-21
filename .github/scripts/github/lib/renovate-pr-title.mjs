@@ -2,16 +2,24 @@ const currentComposePattern = /^apps\/([^/]+)\/([^/]+)\/docker-compose\.yml$/u;
 
 export function findRenovateComposePath(files) {
   const candidates = files.filter((file) => currentComposePattern.test(file.filename));
-  if (candidates.length === 0) return null;
-
-  // 动态编排更新会同时保留旧 Compose 和新增版本目录，优先选择新增的目标版本。
   const added = candidates.filter((file) => file.status === 'added');
-  const selected = added.length > 0 ? added : candidates;
-  const applications = new Set(selected.map((file) => currentComposePattern.exec(file.filename)[1]));
-  if (applications.size !== 1) return null;
+  if (added.length !== 1) {
+    throw new Error(`Renovate PR 必须且只能新增一个目标 Compose，实际为 ${added.length} 个`);
+  }
 
-  selected.sort((left, right) => left.filename.localeCompare(right.filename, 'en', { numeric: true }));
-  return selected.at(-1).filename;
+  const targetComposePath = added[0].filename;
+  const [, application, release] = currentComposePattern.exec(targetComposePath);
+  const targetDirectory = `apps/${application}/${release}/`;
+  const invalidFiles = files.filter(
+    (file) => file.status !== 'added' || !file.filename.startsWith(targetDirectory)
+  );
+  if (invalidFiles.length > 0) {
+    throw new Error(
+      `Renovate PR 修改了目标版本目录之外的文件: ${invalidFiles.map((file) => file.filename).join(', ')}`
+    );
+  }
+
+  return targetComposePath;
 }
 
 export function buildRenovatePrTitle({ application, release }) {
@@ -24,7 +32,6 @@ export function buildRenovatePrTitle({ application, release }) {
 
 export async function updateRenovatePrTitle({ github, pullRequest, changedFiles }) {
   const composePath = findRenovateComposePath(changedFiles);
-  if (!composePath) return false;
   const match = currentComposePattern.exec(composePath);
   const [, application, release] = match;
   const title = buildRenovatePrTitle({ application, release });
