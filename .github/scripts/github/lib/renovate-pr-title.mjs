@@ -30,14 +30,14 @@ export function buildRenovatePrTitle({ application, release }) {
   return `chore(deps): update ${application} tag to ${displayRelease}`;
 }
 
-export async function updateRenovatePrTitle({ github, pullRequest, changedFiles }) {
+export function validateRenovatePrTitle({ pullRequest, changedFiles }) {
   const composePath = findRenovateComposePath(changedFiles);
   const match = currentComposePattern.exec(composePath);
   const [, application, release] = match;
-  const title = buildRenovatePrTitle({ application, release });
-  if (pullRequest.title === title) return false;
+  const expectedTitle = buildRenovatePrTitle({ application, release });
+  if (pullRequest.title !== expectedTitle) {
+    throw new Error(`Renovate PR 标题不正确，期望 ${expectedTitle}，实际 ${pullRequest.title}`);
+  }
 
-  await github.request('PATCH', `/pulls/${pullRequest.number}`, { title });
-  pullRequest.title = title;
-  return true;
+  return { composePath, title: expectedTitle };
 }

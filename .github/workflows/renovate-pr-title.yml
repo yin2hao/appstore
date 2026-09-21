@@ -9,7 +9,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  update-title:
+  process-pr:
     if: startsWith(github.event.pull_request.head.ref, 'renovate/')
     runs-on: ubuntu-latest
     steps:
@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Update title and merge PR
-        run: node .github/scripts/github/update-renovate-pr-title.mjs
+      - name: Validate title and merge PR
+        run: node .github/scripts/github/process-renovate-pr.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

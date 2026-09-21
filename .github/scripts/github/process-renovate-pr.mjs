@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { promises as fs } from 'node:fs';
-import { updateRenovatePrTitle } from './lib/renovate-pr-title.mjs';
+import { validateRenovatePrTitle } from './lib/renovate-pr-title.mjs';
 
 const environment = process.env;
 
@@ -23,7 +23,7 @@ async function main() {
   });
   const pullRequest = await github.request('GET', `/pulls/${pullRequestNumber}`);
   const changedFiles = await github.paginate(`/pulls/${pullRequestNumber}/files`);
-  const updated = await updateRenovatePrTitle({ github, pullRequest, changedFiles });
+  const validated = validateRenovatePrTitle({ pullRequest, changedFiles });
   const merged = await github.mergePullRequest(pullRequest);
   if (merged.merged !== true) {
     throw new Error(`GitHub 未合并 PR #${pullRequestNumber}: ${merged.message || '未知原因'}`);
@@ -31,7 +31,8 @@ async function main() {
   console.log(JSON.stringify({
     event: 'renovate-pr-processed',
     pullRequest: pullRequestNumber,
-    updated,
+    title: validated.title,
+    composePath: validated.composePath,
     merged: merged.merged,
     mergeSha: merged.sha,
   }));
@@ -45,7 +46,7 @@ class GitHubClient {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'appstore-renovate-title',
+      'User-Agent': 'appstore-renovate-pr',
     };
   }
 
