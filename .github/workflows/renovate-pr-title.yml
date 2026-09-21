@@ -1,11 +1,11 @@
-name: Update Renovate PR Title
+name: Process Renovate PR
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Update title with compose release
+      - name: Update title and merge PR
         run: node .github/scripts/github/update-renovate-pr-title.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

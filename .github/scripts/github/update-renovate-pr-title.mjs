@@ -21,7 +21,14 @@ async function main() {
   const pullRequest = await github.request('GET', `/pulls/${pullRequestNumber}`);
   const changedFiles = await github.paginate(`/pulls/${pullRequestNumber}/files`);
   const updated = await updateRenovatePrTitle({ github, pullRequest, changedFiles });
-  console.log(JSON.stringify({ event: 'renovate-pr-title-updated', pullRequest: pullRequestNumber, updated }));
+  const merged = await github.mergePullRequest(pullRequest);
+  console.log(JSON.stringify({
+    event: 'renovate-pr-processed',
+    pullRequest: pullRequestNumber,
+    updated,
+    merged: merged.merged,
+    mergeSha: merged.sha,
+  }));
 }
 
 class GitHubClient {
@@ -59,11 +66,18 @@ class GitHubClient {
       if (batch.length < 100) return values;
     }
   }
+
+  async mergePullRequest(pullRequest) {
+    return this.request('PUT', `/pulls/${pullRequest.number}/merge`, {
+      sha: pullRequest.head.sha,
+      merge_method: 'squash',
+    });
+  }
 }
 
 try {
   await main();
 } catch (error) {
-  console.error(JSON.stringify({ event: 'renovate-pr-title-update-failed', message: error.message }));
+  console.error(JSON.stringify({ event: 'renovate-pr-process-failed', message: error.message }));
   process.exitCode = 1;
 }
