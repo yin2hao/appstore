@@ -1,9 +1,0 @@
-[
-  {
-    "packageFile": ".renovate/current/example.json",
-    "depName": "redis",
-    "depType": "redis",
-    "currentValue": "7.4.0",
-    "newValue": "7.4.1"
-  }
-]

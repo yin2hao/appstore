@@ -5,8 +5,8 @@
     ":disableRateLimiting"
   ],
   "prCreation": "immediate",
-  "automerge": false,
-  "platformAutomerge": false,
+  "automerge": true,
+  "platformAutomerge": true,
   "recreateWhen": "always",
   "branchConcurrentLimit": 0,
   "prConcurrentLimit": 0,

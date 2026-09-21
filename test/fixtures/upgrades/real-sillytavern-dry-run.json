@@ -1,9 +1,0 @@
-[
-  {
-    "packageFile": ".renovate/current/sillytavern.json",
-    "depName": "ghcr.io/sillytavern/sillytavern",
-    "depType": "sillytavern",
-    "currentValue": "1.19.0",
-    "newValue": "1.19.1"
-  }
-]
