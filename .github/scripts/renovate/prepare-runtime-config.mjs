@@ -22,6 +22,10 @@ try {
     excludeCommitPaths: [
       ...new Set([...(globalConfig.excludeCommitPaths || []), ...currentComposePaths]),
     ],
+    packageRules: [
+      ...(globalConfig.packageRules || []),
+      ...currentComposes.map(buildNativeTitleRule),
+    ],
   };
   await fs.mkdir(path.dirname(options.output), { recursive: true });
   await fs.writeFile(options.output, `${JSON.stringify(runtimeConfig, null, 2)}\n`, 'utf8');
@@ -29,10 +33,11 @@ try {
     event: 'renovate-runtime-config-prepared',
     output: options.output,
     excludeCommitPaths: runtimeConfig.excludeCommitPaths,
-    applications: currentComposes.map(({ application, release, composePath }) => ({
+    applications: currentComposes.map(({ application, release, composePath, primaryService }) => ({
       application,
       release,
       composePath,
+      primaryService,
     })),
   }, null, 2));
 } catch (error) {
@@ -55,4 +60,29 @@ function parseArguments(args) {
   }
   if (!parsed.output) throw new Error('缺少 --output');
   return parsed;
+}
+
+function buildNativeTitleRule({ application, composePath, primaryService, primaryTag, revision }) {
+  const displayPrimaryVersion = primaryTag.replace(/^v/u, '');
+  const auxiliaryTarget = `${displayPrimaryVersion}-${revision + 1}`;
+  const primaryTarget =
+    `{{#each upgrades}}{{#if (equals depType '${primaryService}')}}` +
+    "{{{replace '^v' '' newValue}}}-1{{/if}}{{/each}}";
+  const targetRelease =
+    `{{#if (includes depTypes '${primaryService}')}}` +
+    `${primaryTarget}{{else}}${auxiliaryTarget}{{/if}}`;
+
+  return {
+    description: `Create the final ${application} PR title before opening the pull request`,
+    matchManagers: ['custom.regex'],
+    matchFileNames: [composePath],
+    semanticCommits: 'enabled',
+    semanticCommitType: 'chore',
+    semanticCommitScope: 'deps',
+    commitMessageAction: 'update',
+    // groupSingleUpdates 会清空 commitMessageExtra，因此把目标编排版本放在 topic 中。
+    commitMessageTopic: `${application} tag to v${targetRelease}`,
+    commitMessageExtra: '',
+    prTitleStrict: true,
+  };
 }

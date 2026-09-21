@@ -170,6 +170,7 @@ export async function discoverCurrentComposeFiles(rootDirectory) {
         application,
         release,
         composePath: repositoryPath,
+        primaryService: primary.service,
         primaryTag: primary.tag,
         revision: parsedRelease.revision,
       });

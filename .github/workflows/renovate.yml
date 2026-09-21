@@ -29,4 +29,5 @@ jobs:
         uses: renovatebot/github-action@693b9ef15eec82123529a37c782242f091365961 # v46.1.14
         with:
           configurationFile: ${{ runner.temp }}/renovate-runtime.json
+          renovate-version: 44.103.0
           token: ${{ secrets.GITHUBTOKEN }}
