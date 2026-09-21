@@ -12,18 +12,30 @@ const rootDirectory = options.root
 try {
   const currentComposes = await discoverCurrentComposeFiles(rootDirectory);
   const globalConfigPath = path.join(rootDirectory, '.github', 'renovate-global.json');
-  const globalConfig = JSON.parse(await fs.readFile(globalConfigPath, 'utf8'));
+  const repositoryConfigPath = path.join(rootDirectory, 'renovate.json');
+  const [globalConfig, repositoryConfig] = await Promise.all([
+    fs.readFile(globalConfigPath, 'utf8').then(JSON.parse),
+    fs.readFile(repositoryConfigPath, 'utf8').then(JSON.parse),
+  ]);
   const currentComposePaths = currentComposes.map((compose) => compose.composePath);
   const runtimeConfig = {
     ...globalConfig,
+    ...repositoryConfig,
+    // 已将仓库配置合并到临时配置，禁止 Renovate 再次读取 renovate.json 覆盖动态规则。
+    requireConfig: 'ignored',
     includePaths: currentComposePaths,
     // Renovate 仍需修改 package file 后才能把 upgrades 传给 post-upgrade，
     // 但最终提交必须排除源 Compose，只提交脚本创建的新版本目录。
     excludeCommitPaths: [
-      ...new Set([...(globalConfig.excludeCommitPaths || []), ...currentComposePaths]),
+      ...new Set([
+        ...(globalConfig.excludeCommitPaths || []),
+        ...(repositoryConfig.excludeCommitPaths || []),
+        ...currentComposePaths,
+      ]),
     ],
     packageRules: [
       ...(globalConfig.packageRules || []),
+      ...(repositoryConfig.packageRules || []),
       ...currentComposes.map(buildNativeTitleRule),
     ],
   };
