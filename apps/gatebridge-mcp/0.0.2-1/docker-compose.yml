@@ -1,0 +1,31 @@
+services:
+  gatebridge:
+    image: docker.io/yin2hao/gatebridge-mcp:0.0.2
+    container_name: "${CONTAINER_NAME}"
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - "127.0.0.1:${PANEL_APP_PORT_HTTP}:8000"
+    environment:
+      GATEBRIDGE_PORT: "8000"
+      GATEBRIDGE_UPSTREAM_URL: "${GATEBRIDGE_UPSTREAM_URL}"
+      GATEBRIDGE_DEVICE_ID: "${GATEBRIDGE_DEVICE_ID}"
+      GATEBRIDGE_DEVICE_TOKEN: "${GATEBRIDGE_DEVICE_TOKEN}"
+      GATEBRIDGE_API_TOKEN: "${GATEBRIDGE_API_TOKEN}"
+      GATEBRIDGE_ALLOWED_HOSTS: "${GATEBRIDGE_ALLOWED_HOSTS}"
+      GATEBRIDGE_ALLOWED_ORIGINS: "${GATEBRIDGE_ALLOWED_ORIGINS}"
+      GATEBRIDGE_TIMEOUT: "${GATEBRIDGE_TIMEOUT}"
+      GATEBRIDGE_STATUS_MAX_AGE: "${GATEBRIDGE_STATUS_MAX_AGE}"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true

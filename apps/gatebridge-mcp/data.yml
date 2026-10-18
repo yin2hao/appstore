@@ -1,0 +1,34 @@
+name: "GateBridge MCP"
+tags:
+  - AI
+  - Tool
+title: "GateBridge MCP"
+description: "将现有 ESP32 闸门控制服务接入 MCP。"
+additionalProperties:
+  key: gatebridge-mcp
+  name: "GateBridge MCP"
+  tags:
+    - AI
+    - Tool
+  shortDescZh: "将现有 ESP32 闸门控制服务接入 MCP。"
+  shortDescEn: "MCP adapter for an existing ESP32 gate controller."
+  description:
+    en: "MCP adapter for an existing ESP32 gate controller."
+    es-es: "MCP adapter for an existing ESP32 gate controller."
+    ja: "MCP adapter for an existing ESP32 gate controller."
+    ms: "MCP adapter for an existing ESP32 gate controller."
+    pt-br: "MCP adapter for an existing ESP32 gate controller."
+    ru: "MCP adapter for an existing ESP32 gate controller."
+    ko: "MCP adapter for an existing ESP32 gate controller."
+    zh-Hant: "將現有 ESP32 閘門控制服務接入 MCP。"
+    zh: "将现有 ESP32 闸门控制服务接入 MCP。"
+    tr: "MCP adapter for an existing ESP32 gate controller."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  website: https://github.com/yin2hao-tools/GateBridge-MCP
+  github: https://github.com/yin2hao-tools/GateBridge-MCP
+  document: https://github.com/yin2hao-tools/GateBridge-MCP/blob/main/docs/api.md

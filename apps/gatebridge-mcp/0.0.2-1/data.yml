@@ -1,0 +1,181 @@
+additionalProperties:
+  formFields:
+    - default: ""
+      envKey: GATEBRIDGE_UPSTREAM_URL
+      labelEn: "Upstream WebSocket URL"
+      labelZh: "原后端 WebSocket 地址"
+      label:
+        en: "Upstream WebSocket URL"
+        es-es: "Upstream WebSocket URL"
+        ja: "Upstream WebSocket URL"
+        ms: "Upstream WebSocket URL"
+        pt-br: "Upstream WebSocket URL"
+        ru: "Upstream WebSocket URL"
+        ko: "Upstream WebSocket URL"
+        zh-Hant: "原後端 WebSocket 位址"
+        zh: "原后端 WebSocket 地址"
+        tr: "Upstream WebSocket URL"
+      required: true
+      type: text
+      description:
+        en: "A ws:// or wss:// URL reachable from this container, including /ws; do not use 127.0.0.1 for another server."
+        zh: "填写容器可访问的 ws:// 或 wss:// 地址，包含 /ws 路径。原后端在其他服务器时，请勿填写 127.0.0.1。"
+    - default: mg946r-001
+      envKey: GATEBRIDGE_DEVICE_ID
+      labelEn: "Device ID"
+      labelZh: "设备 ID"
+      label:
+        en: "Device ID"
+        es-es: "Device ID"
+        ja: "Device ID"
+        ms: "Device ID"
+        pt-br: "Device ID"
+        ru: "Device ID"
+        ko: "Device ID"
+        zh-Hant: "裝置 ID"
+        zh: "设备 ID"
+        tr: "Device ID"
+      required: true
+      type: text
+      description:
+        en: "Use the device ID configured on the original server."
+        zh: "填写原后端实际配置的设备 ID。"
+    - default: ""
+      envKey: GATEBRIDGE_DEVICE_TOKEN
+      labelEn: "Upstream Device Token"
+      labelZh: "原后端设备令牌"
+      label:
+        en: "Upstream Device Token"
+        es-es: "Upstream Device Token"
+        ja: "Upstream Device Token"
+        ms: "Upstream Device Token"
+        pt-br: "Upstream Device Token"
+        ru: "Upstream Device Token"
+        ko: "Upstream Device Token"
+        zh-Hant: "原後端裝置權杖"
+        zh: "原后端设备令牌"
+        tr: "Upstream Device Token"
+      required: true
+      type: password
+      description:
+        en: "Use the effective servo_token from the original server, or its auth_key fallback."
+        zh: "从原后端获取实际生效的 servo_token；未设置时使用 auth_key。"
+    - default: ""
+      envKey: GATEBRIDGE_API_TOKEN
+      labelEn: "MCP Access Token"
+      labelZh: "MCP 访问令牌"
+      label:
+        en: "MCP Access Token"
+        es-es: "MCP Access Token"
+        ja: "MCP Access Token"
+        ms: "MCP Access Token"
+        pt-br: "MCP Access Token"
+        ru: "MCP Access Token"
+        ko: "MCP Access Token"
+        zh-Hant: "MCP 存取權杖"
+        zh: "MCP 访问令牌"
+        tr: "MCP Access Token"
+      required: true
+      type: password
+      random: true
+      description:
+        en: "A separate random token for the robot. Send it as Authorization: Bearer <token>."
+        zh: "使用独立的随机令牌。机器人通过 Authorization: Bearer <令牌> 请求头发送。"
+    - default: ""
+      envKey: GATEBRIDGE_ALLOWED_HOSTS
+      labelEn: "Allowed HTTP Hosts (comma-separated)"
+      labelZh: "允许访问的域名或 IP（逗号分隔）"
+      label:
+        en: "Allowed HTTP Hosts (comma-separated)"
+        es-es: "Allowed HTTP Hosts (comma-separated)"
+        ja: "Allowed HTTP Hosts (comma-separated)"
+        ms: "Allowed HTTP Hosts (comma-separated)"
+        pt-br: "Allowed HTTP Hosts (comma-separated)"
+        ru: "Allowed HTTP Hosts (comma-separated)"
+        ko: "Allowed HTTP Hosts (comma-separated)"
+        zh-Hant: "允許存取的網域或 IP（逗號分隔）"
+        zh: "允许访问的域名或 IP（逗号分隔）"
+        tr: "Allowed HTTP Hosts (comma-separated)"
+      required: true
+      type: text
+      description:
+        en: "Request Host values without scheme or path, for example mcp.example.com. Include the port when present."
+        zh: "填写请求使用的域名，不含协议和路径，如 mcp.example.com。请求带端口时需包含端口。"
+    - default: ""
+      envKey: GATEBRIDGE_ALLOWED_ORIGINS
+      labelEn: "Allowed Browser Origins (comma-separated)"
+      labelZh: "允许的浏览器来源（逗号分隔）"
+      label:
+        en: "Allowed Browser Origins (comma-separated)"
+        es-es: "Allowed Browser Origins (comma-separated)"
+        ja: "Allowed Browser Origins (comma-separated)"
+        ms: "Allowed Browser Origins (comma-separated)"
+        pt-br: "Allowed Browser Origins (comma-separated)"
+        ru: "Allowed Browser Origins (comma-separated)"
+        ko: "Allowed Browser Origins (comma-separated)"
+        zh-Hant: "允許的瀏覽器來源（逗號分隔）"
+        zh: "允许的浏览器来源（逗号分隔）"
+        tr: "Allowed Browser Origins (comma-separated)"
+      required: false
+      type: text
+      description:
+        en: "Optional full browser origins, for example https://robot.example.com. Server-side robots can leave this empty."
+        zh: "浏览器调用时填写完整来源，如 https://robot.example.com。服务端机器人可留空。"
+    - default: 8
+      envKey: GATEBRIDGE_TIMEOUT
+      labelEn: "Upstream Timeout (seconds)"
+      labelZh: "上游超时（秒）"
+      label:
+        en: "Upstream Timeout (seconds)"
+        es-es: "Upstream Timeout (seconds)"
+        ja: "Upstream Timeout (seconds)"
+        ms: "Upstream Timeout (seconds)"
+        pt-br: "Upstream Timeout (seconds)"
+        ru: "Upstream Timeout (seconds)"
+        ko: "Upstream Timeout (seconds)"
+        zh-Hant: "上游逾時（秒）"
+        zh: "上游超时（秒）"
+        tr: "Upstream Timeout (seconds)"
+      required: true
+      type: number
+      description:
+        en: "Connection, authentication and command acknowledgement timeout; greater than 0 and at most 3600 seconds."
+        zh: "连接、认证和命令回执的超时，大于 0 且不超过 3600 秒。"
+    - default: 30
+      envKey: GATEBRIDGE_STATUS_MAX_AGE
+      labelEn: "Status Validity (seconds)"
+      labelZh: "状态有效期（秒）"
+      label:
+        en: "Status Validity (seconds)"
+        es-es: "Status Validity (seconds)"
+        ja: "Status Validity (seconds)"
+        ms: "Status Validity (seconds)"
+        pt-br: "Status Validity (seconds)"
+        ru: "Status Validity (seconds)"
+        ko: "Status Validity (seconds)"
+        zh-Hant: "狀態有效期（秒）"
+        zh: "状态有效期（秒）"
+        tr: "Status Validity (seconds)"
+      required: true
+      type: number
+      description:
+        en: "Maximum age of live status reports; greater than 0 and at most 3600 seconds. Initial snapshots remain stale."
+        zh: "后续状态报告的有效期，大于 0 且不超过 3600 秒。首次快照始终标记为过期。"
+    - default: 8000
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: Port
+      labelZh: "端口"
+      label:
+        en: Port
+        es-es: Puerto
+        ja: "ポート"
+        ms: Port
+        pt-br: Porta
+        ru: "Порт"
+        ko: "포트"
+        zh-Hant: "埠"
+        zh: "端口"
+        tr: "Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
