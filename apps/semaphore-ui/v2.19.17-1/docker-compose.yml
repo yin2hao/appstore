@@ -1,0 +1,24 @@
+services:
+  semaphore:
+    image: semaphoreui/semaphore:v2.19.17
+    container_name: "${CONTAINER_NAME}"
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - "${PANEL_APP_PORT_HTTP}:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: sqlite
+      SEMAPHORE_ADMIN: "${SEMAPHORE_ADMIN}"
+      SEMAPHORE_ADMIN_PASSWORD: "${SEMAPHORE_ADMIN_PASSWORD}"
+      SEMAPHORE_ADMIN_NAME: Admin
+      SEMAPHORE_ADMIN_EMAIL: "${SEMAPHORE_ADMIN_EMAIL}"
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data:/var/lib/semaphore
+      - ./config:/etc/semaphore
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true

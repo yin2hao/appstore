@@ -1,0 +1,34 @@
+name: "Semaphore UI"
+tags:
+  - DevOps
+  - Tool
+title: "Semaphore UI"
+description: "用于 Ansible、Terraform 和 OpenTofu 自动化任务的 Web 界面。"
+additionalProperties:
+  key: semaphore-ui
+  name: "Semaphore UI"
+  tags:
+    - DevOps
+    - Tool
+  shortDescZh: "用于 Ansible、Terraform 和 OpenTofu 自动化任务的 Web 界面。"
+  shortDescEn: "Web interface for Ansible, Terraform and OpenTofu automation."
+  description:
+    en: "Web interface for Ansible, Terraform and OpenTofu automation."
+    es-es: "Web interface for Ansible, Terraform and OpenTofu automation."
+    ja: "Web interface for Ansible, Terraform and OpenTofu automation."
+    ms: "Web interface for Ansible, Terraform and OpenTofu automation."
+    pt-br: "Web interface for Ansible, Terraform and OpenTofu automation."
+    ru: "Web interface for Ansible, Terraform and OpenTofu automation."
+    ko: "Web interface for Ansible, Terraform and OpenTofu automation."
+    zh-Hant: "用於 Ansible、Terraform 和 OpenTofu 自動化任務的 Web 介面。"
+    zh: "用于 Ansible、Terraform 和 OpenTofu 自动化任务的 Web 界面。"
+    tr: "Web interface for Ansible, Terraform and OpenTofu automation."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  website: https://semaphoreui.com/
+  github: https://github.com/semaphoreui/semaphore
+  document: https://semaphoreui.com/docs/
