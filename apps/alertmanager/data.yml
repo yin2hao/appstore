@@ -1,0 +1,34 @@
+name: Alertmanager
+tags:
+  - DevOps
+  - Tool
+title: Alertmanager
+description: "Prometheus 告警分组、路由和通知服务。"
+additionalProperties:
+  key: alertmanager
+  name: Alertmanager
+  tags:
+    - DevOps
+    - Tool
+  shortDescZh: "Prometheus 告警分组、路由和通知服务。"
+  shortDescEn: "Prometheus alert grouping, routing and notification service."
+  description:
+    en: "Prometheus alert grouping, routing and notification service."
+    es-es: "Prometheus alert grouping, routing and notification service."
+    ja: "Prometheus alert grouping, routing and notification service."
+    ms: "Prometheus alert grouping, routing and notification service."
+    pt-br: "Prometheus alert grouping, routing and notification service."
+    ru: "Prometheus alert grouping, routing and notification service."
+    ko: "Prometheus alert grouping, routing and notification service."
+    zh-Hant: "Prometheus 告警分組、路由和通知服務。"
+    zh: "Prometheus 告警分组、路由和通知服务。"
+    tr: "Prometheus alert grouping, routing and notification service."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  website: https://prometheus.io/
+  github: https://github.com/prometheus/alertmanager
+  document: https://prometheus.io/docs/alerting/latest/configuration/

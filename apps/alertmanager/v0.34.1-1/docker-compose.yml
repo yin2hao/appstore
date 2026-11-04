@@ -1,0 +1,21 @@
+services:
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    container_name: "${CONTAINER_NAME}"
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - "${HOST_IP}:${PANEL_APP_PORT_HTTP}:9093"
+    volumes:
+      - ./config:/etc/alertmanager:ro
+      - ./data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--cluster.listen-address="
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true
