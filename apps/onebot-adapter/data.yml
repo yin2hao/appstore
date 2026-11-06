@@ -1,0 +1,33 @@
+name: "OneBot Adapter"
+tags:
+  - DevOps
+  - Tool
+title: "OneBot Adapter"
+description: "将 Alertmanager 告警转发到 OneBot 11 群聊和私聊。"
+additionalProperties:
+  key: onebot-adapter
+  name: "OneBot Adapter"
+  tags:
+    - DevOps
+    - Tool
+  shortDescZh: "将 Alertmanager 告警转发到 OneBot 11 群聊和私聊。"
+  shortDescEn: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+  description:
+    en: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    es-es: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    ja: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    ms: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    pt-br: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    ru: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    ko: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+    zh-Hant: "將 Alertmanager 告警轉發到 OneBot 11 群組和私訊。"
+    zh: "将 Alertmanager 告警转发到 OneBot 11 群聊和私聊。"
+    tr: "Forward Alertmanager alerts to OneBot 11 group chats and private chats."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  github: https://github.com/yin2hao/onebot-adapter
+  document: "https://github.com/yin2hao/onebot-adapter#readme"

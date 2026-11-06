@@ -1,0 +1,18 @@
+services:
+  onebot-adapter:
+    image: yin2hao/onebot-adapter:0.0.1
+    container_name: "${CONTAINER_NAME}"
+    restart: always
+    stop_grace_period: 20s
+    networks:
+      - 1panel-network
+    ports:
+      - "${HOST_IP}:${PANEL_APP_PORT_HTTP}:8080"
+    volumes:
+      - ./config/config.json:/config.json:ro
+      - ./data:/data
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true
