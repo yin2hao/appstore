@@ -1,0 +1,36 @@
+name: "Grafana Alloy"
+tags:
+  - DevOps
+  - Tool
+title: "Grafana Alloy"
+description: "采集指标、日志、追踪和性能剖析数据。"
+additionalProperties:
+  key: grafana-alloy
+  name: "Grafana Alloy"
+  tags:
+    - DevOps
+    - Tool
+  shortDescZh: "采集指标、日志、追踪和性能剖析数据。"
+  shortDescEn: "Collector for metrics, logs, traces, and profiles."
+  description:
+    en: "Collector for metrics, logs, traces, and profiles."
+    es-es: "Collector for metrics, logs, traces, and profiles."
+    ja: "Collector for metrics, logs, traces, and profiles."
+    ms: "Collector for metrics, logs, traces, and profiles."
+    pt-br: "Collector for metrics, logs, traces, and profiles."
+    ru: "Collector for metrics, logs, traces, and profiles."
+    ko: "Collector for metrics, logs, traces, and profiles."
+    zh-Hant: "採集指標、日誌、追蹤和效能剖析資料。"
+    zh: "采集指标、日志、追踪和性能剖析数据。"
+    tr: "Collector for metrics, logs, traces, and profiles."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+    - ppc64le
+    - s390x
+  website: https://grafana.com/oss/alloy/
+  github: https://github.com/grafana/alloy
+  document: https://grafana.com/docs/alloy/latest/

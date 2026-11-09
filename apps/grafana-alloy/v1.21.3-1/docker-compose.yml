@@ -1,0 +1,22 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: "${CONTAINER_NAME}"
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - "${HOST_IP}:${PANEL_APP_PORT_HTTP}:12345"
+    volumes:
+      - ./config:/etc/alloy:ro
+      - ./data:/var/lib/alloy/data
+    command:
+      - run
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - /etc/alloy/config.alloy
+    labels:
+      createdBy: Apps
+networks:
+  1panel-network:
+    external: true
