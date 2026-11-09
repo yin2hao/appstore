@@ -1,0 +1,34 @@
+name: "Grafana Loki"
+tags:
+  - DevOps
+  - Tool
+title: "Grafana Loki"
+description: "集中存储和查询日志。"
+additionalProperties:
+  key: grafana-loki
+  name: "Grafana Loki"
+  tags:
+    - DevOps
+    - Tool
+  shortDescZh: "集中存储和查询日志。"
+  shortDescEn: "Log aggregation and query service."
+  description:
+    en: "Log aggregation and query service."
+    es-es: "Log aggregation and query service."
+    ja: "Log aggregation and query service."
+    ms: "Log aggregation and query service."
+    pt-br: "Log aggregation and query service."
+    ru: "Log aggregation and query service."
+    ko: "Log aggregation and query service."
+    zh-Hant: "集中儲存和查詢日誌。"
+    zh: "集中存储和查询日志。"
+    tr: "Log aggregation and query service."
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  architectures:
+    - amd64
+    - arm64
+  website: https://grafana.com/oss/loki/
+  github: https://github.com/grafana/loki
+  document: https://grafana.com/docs/loki/latest/
