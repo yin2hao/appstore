@@ -1,0 +1,72 @@
+additionalProperties:
+  formFields:
+    - default: admin
+      envKey: SEMAPHORE_ADMIN
+      labelEn: "Admin Username"
+      labelZh: "管理员用户名"
+      label:
+        en: "Admin Username"
+        es-es: "Admin Username"
+        ja: "Admin Username"
+        ms: "Admin Username"
+        pt-br: "Admin Username"
+        ru: "Admin Username"
+        ko: "Admin Username"
+        zh-Hant: "管理員使用者名稱"
+        zh: "管理员用户名"
+        tr: "Admin Username"
+      required: true
+      type: text
+    - default: ""
+      envKey: SEMAPHORE_ADMIN_PASSWORD
+      labelEn: Password
+      labelZh: "密码"
+      label:
+        en: Password
+        es-es: "Contraseña"
+        ja: "パスワード"
+        ms: "Kata laluan"
+        pt-br: Senha
+        ru: "Пароль"
+        ko: "비밀번호"
+        zh-Hant: "密碼"
+        zh: "密码"
+        tr: Parola
+      required: true
+      random: true
+      type: password
+    - default: admin@localhost
+      envKey: SEMAPHORE_ADMIN_EMAIL
+      labelEn: "Admin Email"
+      labelZh: "管理员邮箱"
+      label:
+        en: "Admin Email"
+        es-es: "Admin Email"
+        ja: "Admin Email"
+        ms: "Admin Email"
+        pt-br: "Admin Email"
+        ru: "Admin Email"
+        ko: "Admin Email"
+        zh-Hant: "管理員電子郵件"
+        zh: "管理员邮箱"
+        tr: "Admin Email"
+      required: true
+      type: text
+    - default: 3000
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: "Web UI Port"
+      labelZh: "Web UI 端口"
+      label:
+        en: "Web UI Port"
+        es-es: "Puerto web"
+        ja: "Web UIポート"
+        ms: "Port Web UI"
+        pt-br: "Porta da Web UI"
+        ru: "Порт веб-интерфейса"
+        ko: "웹 UI 포트"
+        zh-Hant: "Web UI 埠"
+        zh: "Web UI 端口"
+        tr: "Web UI Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
