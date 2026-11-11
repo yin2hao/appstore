@@ -10,7 +10,7 @@ services:
     labels:
       createdBy: Apps
   frontend:
-    image: yin2hao/videobackup-frontend:1.9.3
+    image: yin2hao/videobackup-frontend:1.9.2
     container_name: ${CONTAINER_NAME}
     restart: always
     networks:
@@ -19,8 +19,6 @@ services:
       - ${PANEL_APP_PORT_HTTP}:80
     depends_on:
       - backend
-    volumes:
-      - ./frontend.env:/usr/share/nginx/html/frontend.env:ro
     labels:
       createdBy: Apps
 networks:
