@@ -1,0 +1,74 @@
+additionalProperties:
+  formFields:
+    - default: 12345
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: "HTTP Port"
+      labelZh: "HTTP 端口"
+      label:
+        en: "HTTP Port"
+        es-es: "Puerto HTTP"
+        ja: "HTTP ポート"
+        ms: "Port HTTP"
+        pt-br: "Porta HTTP"
+        ru: "HTTP-порт"
+        ko: "HTTP 포트"
+        zh-Hant: "HTTP 埠"
+        zh: "HTTP 端口"
+        tr: "HTTP Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
+    - default: 12347
+      envKey: PANEL_APP_PORT_FARO
+      labelEn: "Faro Port"
+      labelZh: "Faro 端口"
+      label:
+        en: "Faro Port"
+        es-es: "Puerto de Faro"
+        ja: "Faro ポート"
+        ms: "Port Faro"
+        pt-br: "Porta Faro"
+        ru: "Порт Faro"
+        ko: "Faro 포트"
+        zh-Hant: "Faro 埠"
+        zh: "Faro 端口"
+        tr: "Faro Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
+    - default: 4317
+      envKey: PANEL_APP_PORT_OTLP_GRPC
+      labelEn: "OTLP gRPC Port"
+      labelZh: "OTLP gRPC 端口"
+      label:
+        en: "OTLP gRPC Port"
+        es-es: "Puerto OTLP gRPC"
+        ja: "OTLP gRPC ポート"
+        ms: "Port OTLP gRPC"
+        pt-br: "Porta OTLP gRPC"
+        ru: "Порт OTLP gRPC"
+        ko: "OTLP gRPC 포트"
+        zh-Hant: "OTLP gRPC 埠"
+        zh: "OTLP gRPC 端口"
+        tr: "OTLP gRPC Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
+    - default: 4318
+      envKey: PANEL_APP_PORT_OTLP_HTTP
+      labelEn: "OTLP HTTP Port"
+      labelZh: "OTLP HTTP 端口"
+      label:
+        en: "OTLP HTTP Port"
+        es-es: "Puerto OTLP HTTP"
+        ja: "OTLP HTTP ポート"
+        ms: "Port OTLP HTTP"
+        pt-br: "Porta OTLP HTTP"
+        ru: "Порт OTLP HTTP"
+        ko: "OTLP HTTP 포트"
+        zh-Hant: "OTLP HTTP 埠"
+        zh: "OTLP HTTP 端口"
+        tr: "OTLP HTTP Bağlantı Noktası"
+      required: true
+      rule: paramPort
+      type: number
