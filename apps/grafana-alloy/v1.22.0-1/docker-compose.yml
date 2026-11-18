@@ -8,6 +8,7 @@ services:
     ports:
       - ${HOST_IP}:${PANEL_APP_PORT_HTTP}:12345
       - ${HOST_IP}:${PANEL_APP_PORT_FARO:-12347}:12347
+      - ${HOST_IP}:${PANEL_APP_PORT_FARO2:-12348}:12348
       - ${HOST_IP}:${PANEL_APP_PORT_OTLP_GRPC:-4317}:4317
       - ${HOST_IP}:${PANEL_APP_PORT_OTLP_HTTP:-4318}:4318
     volumes:
