@@ -1,0 +1,54 @@
+additionalProperties:
+  formFields:
+    - default: 8000
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: "Web UI Port"
+      labelZh: "Web UI 端口"
+      required: true
+      rule: paramPort
+      type: number
+      label:
+        en: "Web UI Port"
+        es-es: "Web UI Port"
+        ja: "Web UI Port"
+        ms: "Web UI Port"
+        pt-br: "Web UI Port"
+        ru: "Web UI Port"
+        ko: "Web UI Port"
+        zh-Hant: "Web UI 端口"
+        zh: "Web UI 端口"
+        tr: "Web UI Port"
+    - default: 1000
+      envKey: PUID
+      labelEn: "User ID"
+      labelZh: "用户 ID"
+      required: true
+      type: number
+      label:
+        en: "User ID"
+        es-es: "User ID"
+        ja: "User ID"
+        ms: "User ID"
+        pt-br: "User ID"
+        ru: "User ID"
+        ko: "User ID"
+        zh-Hant: "用户 ID"
+        zh: "用户 ID"
+        tr: "User ID"
+    - default: 1000
+      envKey: PGID
+      labelEn: "Group ID"
+      labelZh: "用户组 ID"
+      required: true
+      type: number
+      label:
+        en: "Group ID"
+        es-es: "Group ID"
+        ja: "Group ID"
+        ms: "Group ID"
+        pt-br: "Group ID"
+        ru: "Group ID"
+        ko: "Group ID"
+        zh-Hant: "用户组 ID"
+        zh: "用户组 ID"
+        tr: "Group ID"
